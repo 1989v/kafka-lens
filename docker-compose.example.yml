@@ -1,14 +1,18 @@
-# Drop this file alongside a `config.yml` and run:
-#   docker compose -f docker-compose.example.yml up
+# Run from this directory:
 #
-# This spins up a local Kafka (KRaft mode) and Kafka Lens pointed at it.
+#   docker compose -f docker-compose.example.yml up --build
+#
+# Spins up a local KRaft Kafka and Kafka Lens pointed at it. Kafka cluster
+# configuration is injected via environment variables (provectus/kafka-ui
+# style). For more advanced setups (SASL/SSL, multiple clusters, named DLQ
+# patterns) you can mount a config.yml instead — see the commented block below.
 
 services:
   kafka:
     image: bitnami/kafka:3.7
     container_name: kafka-lens-kafka
     ports:
-      - "29092:29092"   # host-side listener (use localhost:29092 from your host shell)
+      - "29092:29092"   # host-side listener — use localhost:29092 from your host shell
     environment:
       KAFKA_CFG_NODE_ID: "0"
       KAFKA_CFG_PROCESS_ROLES: controller,broker
@@ -21,8 +25,6 @@ services:
       ALLOW_PLAINTEXT_LISTENER: "yes"
 
   kafka-lens:
-    # Until ghcr.io/<owner>/kafka-lens is published, build locally:
-    #   docker compose -f docker-compose.example.yml build
     image: kafka-lens:dev
     build: .
     container_name: kafka-lens
@@ -31,10 +33,36 @@ services:
     ports:
       - "9192:9192"
     volumes:
-      - ./config.yml:/app/config.yml:ro
       - kafka-lens-data:/app/data
     environment:
-      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config.yml
+      # ---- Cluster #0 ----
+      CLUSTERS_0_ID: local
+      CLUSTERS_0_NAME: Local Kafka (compose)
+      CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      # CLUSTERS_0_SECURITY_PROTOCOL: SASL_SSL
+      # CLUSTERS_0_SECURITY_SASLMECHANISM: AWS_MSK_IAM
+      # CLUSTERS_0_SECURITY_SASLJAASCONFIG: 'software.amazon.msk.auth.iam.IAMLoginModule required;'
+      # CLUSTERS_0_DLQNAMINGPATTERNS_0: '{topic}.DLT'
+      # CLUSTERS_0_DLQNAMINGPATTERNS_1: 'dead-letter-{topic}'
+
+      # ---- Add more clusters by incrementing the index ----
+      # CLUSTERS_1_ID: staging
+      # CLUSTERS_1_NAME: Staging MSK
+      # CLUSTERS_1_BOOTSTRAPSERVERS: b-1.staging.kafka:9094,b-2.staging.kafka:9094
+
+      AUTH_MODE: none
+      STORAGE_SQLITEPATH: /app/data/kafka-lens.db
+      SCAN_MAXMESSAGESPERJOB: "100000"
+      SCAN_MAXSCANDURATIONSECONDS: "120"
+
+      # ---- Alternative: mount a YAML config file instead of env vars ----
+      # Uncomment the volume below and the SPRING_CONFIG line, then put your
+      # cluster definitions in config.yml (see config.example.yml).
+      # SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config.yml
+
+    # volumes:
+    #   - ./config.yml:/app/config.yml:ro
+    #   - kafka-lens-data:/app/data
 
 volumes:
   kafka-lens-data:

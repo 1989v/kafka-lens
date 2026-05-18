@@ -27,26 +27,65 @@ Kafka Lens is built around those questions.
 
 ```bash
 docker run -p 9192:9192 \
-  -v $(pwd)/config.yml:/app/config.yml \
+  -e CLUSTERS_0_ID=local \
+  -e CLUSTERS_0_NAME='Local Kafka' \
+  -e CLUSTERS_0_BOOTSTRAPSERVERS=host.docker.internal:9092 \
+  -e AUTH_MODE=none \
   -v $(pwd)/data:/app/data \
   ghcr.io/{org}/kafka-lens:latest
 ```
 
 Then open <http://localhost:9192>.
 
-Minimal `config.yml`:
+See [`docker-compose.example.yml`](./docker-compose.example.yml) for a working Kafka-alongside setup.
 
-```yaml
-clusters:
-  - id: local
-    name: Local Kafka
-    bootstrapServers: localhost:9092
+## Configuration
 
-auth:
-  mode: none  # none | basic | oidc
+Kafka Lens accepts configuration two ways. Use whichever fits your runtime — they
+compose, with environment variables overriding YAML on a per-key basis.
+
+### Environment variables (provectus/kafka-ui style)
+
+Cluster definitions are indexed: `CLUSTERS_0_*`, `CLUSTERS_1_*`, and so on.
+
+```bash
+CLUSTERS_0_ID=prod
+CLUSTERS_0_NAME='Prod MSK'
+CLUSTERS_0_BOOTSTRAPSERVERS=b-1.prod.kafka:9094,b-2.prod.kafka:9094
+CLUSTERS_0_SECURITY_PROTOCOL=SASL_SSL
+CLUSTERS_0_SECURITY_SASLMECHANISM=AWS_MSK_IAM
+CLUSTERS_0_SECURITY_SASLJAASCONFIG='software.amazon.msk.auth.iam.IAMLoginModule required;'
+
+CLUSTERS_1_ID=staging
+CLUSTERS_1_BOOTSTRAPSERVERS=b-1.staging.kafka:9092
+
+AUTH_MODE=none
+STORAGE_SQLITEPATH=/app/data/kafka-lens.db
 ```
 
-See [`config.example.yml`](./config.example.yml) for the full reference and [`docker-compose.example.yml`](./docker-compose.example.yml) for a Kafka-alongside example.
+This is the recommended way for `docker run` / `docker compose` / Kubernetes
+Deployments — no file mount needed.
+
+### YAML config file
+
+Mount or place a `config.yml` next to the JAR and point Kafka Lens at it:
+
+```bash
+java -jar build/libs/kafka-lens.jar \
+  --spring.config.additional-location=file:./config.yml
+```
+
+Or with Docker:
+
+```bash
+docker run -p 9192:9192 \
+  -v $(pwd)/config.yml:/app/config.yml:ro \
+  -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config.yml \
+  ghcr.io/{org}/kafka-lens:latest
+```
+
+See [`config.example.yml`](./config.example.yml) for the full YAML reference
+(SASL/SSL, DLQ naming patterns, scan limits, auth modes, multi-cluster).
 
 ## Build from source
 

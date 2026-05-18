@@ -40,33 +40,42 @@ function RootRedirect() {
     </div>
   );
   return (
-    <div className="empty" style={{ maxWidth: 640, margin: "60px auto", textAlign: "left" }}>
+    <div className="empty" style={{ maxWidth: 720, margin: "60px auto", textAlign: "left" }}>
       <h1 style={{ textAlign: "center" }}>No Kafka clusters configured</h1>
       <p>
-        Kafka Lens reads cluster definitions from a YAML file. You're seeing this screen
-        because the running instance has an empty <code>clusters</code> list.
+        You're seeing this screen because the running instance has an empty <code>clusters</code> list.
+        Pick whichever configuration mode fits your runtime — environment variables compose with YAML,
+        with env overriding on a per-key basis.
       </p>
-      <p>Create a <code>config.yml</code> next to the container or jar:</p>
-      <pre>{`clusters:
+
+      <h2>Option 1 — environment variables (recommended for docker / k8s)</h2>
+      <pre>{`docker run -p 9192:9192 \\
+  -e CLUSTERS_0_ID=local \\
+  -e CLUSTERS_0_NAME='Local Kafka' \\
+  -e CLUSTERS_0_BOOTSTRAPSERVERS=host.docker.internal:9092 \\
+  -e AUTH_MODE=none \\
+  kafka-lens:dev`}</pre>
+      <p className="muted">
+        Index clusters with <code>CLUSTERS_0_*</code>, <code>CLUSTERS_1_*</code>, …
+        For SASL/SSL: <code>CLUSTERS_0_SECURITY_PROTOCOL</code>,
+        <code>CLUSTERS_0_SECURITY_SASLMECHANISM</code>, etc.
+      </p>
+
+      <h2>Option 2 — YAML config file</h2>
+      <pre>{`# config.yml
+clusters:
   - id: local
     name: Local Kafka
     bootstrapServers: localhost:9092
 
 auth:
   mode: none`}</pre>
-      <p>Then start Kafka Lens pointing at it:</p>
-      <pre>{`# JAR
-java -jar build/libs/kafka-lens.jar \\
-  --spring.config.additional-location=file:./config.yml
+      <pre>{`java -jar build/libs/kafka-lens.jar \\
+  --spring.config.additional-location=file:./config.yml`}</pre>
 
-# Docker
-docker run -p 9192:9192 \\
-  -v "$(pwd)/config.yml":/app/config.yml \\
-  -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config.yml \\
-  kafka-lens:dev`}</pre>
       <p className="muted">
-        See <code>config.example.yml</code> in the repo for the full reference (SASL/SSL,
-        DLQ naming patterns, scan limits, auth modes).
+        See <code>config.example.yml</code> in the repo for the full reference
+        (SASL/SSL, DLQ naming patterns, scan limits, auth modes, multi-cluster).
       </p>
     </div>
   );
