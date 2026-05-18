@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: kafka-lens
+  threads:
+    virtual:
+      enabled: true
+  mvc:
+    async:
+      request-timeout: 300000
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    io.github.kafkalens: INFO
+    org.apache.kafka: WARN
+
+# Kafka Lens defaults — overridden by user config.yml
+clusters: []
+
+storage:
+  sqlite-path: ./data/kafka-lens.db
+
+scan:
+  max-messages-per-job: 100000
+  max-scan-duration-seconds: 120
+  default-page-size: 100
+
+dlq:
+  reprocess:
+    require-confirmation: true
+    max-batch-size: 1000
+    duplicate-detection-window: 24h
+
+auth:
+  mode: none

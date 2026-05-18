@@ -1,0 +1,164 @@
+export type Cluster = { id: string; name: string; bootstrapServers: string };
+export type ClusterDetail = Cluster & {
+  brokerVersion: string | null;
+  brokerCount: number;
+  supportedFeatures: Record<string, boolean>;
+  dlqNamingPatterns: string[];
+};
+export type Partition = {
+  partition: number;
+  leader: number | null;
+  replicas: number[];
+  inSyncReplicas: number[];
+  beginningOffset: number;
+  endOffset: number;
+};
+export type Topic = {
+  clusterId: string;
+  name: string;
+  partitions: Partition[];
+  internal: boolean;
+  totalMessages: number;
+};
+export type Message = {
+  topic: string;
+  partition: number;
+  offset: number;
+  timestamp: string;
+  key: string | null;
+  value: string | null;
+  headers: Record<string, string>;
+};
+export type SearchResult = {
+  jobId: string;
+  matched: Message[];
+  scannedCount: number;
+  durationMs: number;
+  completed: boolean;
+  cancelled: boolean;
+  limitsHit: string[];
+};
+export type DlqMapping = {
+  clusterId: string;
+  originTopic: string;
+  dlqTopic: string;
+  source: "AUTO" | "MANUAL";
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  detectedAt: string;
+};
+export type DlqMessage = {
+  record: Message;
+  originTopic: string | null;
+  originPartition: number | null;
+  originOffset: number | null;
+  failureReason: string | null;
+  exceptionClass: string | null;
+  retryCount: number | null;
+  lastAttemptAt: string | null;
+  correlationId: string | null;
+  isReprocessable: boolean;
+};
+export type DlqPage = { originTopic: string | null; messages: DlqMessage[] };
+export type ReprocessJob = {
+  id: string;
+  clusterId: string;
+  dlqTopic: string;
+  originTopic: string;
+  mode: "SINGLE" | "GROUP" | "ALL";
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "CANCELLED";
+  requestedBy: string;
+  createdAt: string;
+  completedAt: string | null;
+  totalRequested: number;
+  succeeded: number;
+  failed: number;
+  notes: string | null;
+};
+
+async function http<T>(input: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(input, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+  }
+  if (res.status === 204) return undefined as unknown as T;
+  return (await res.json()) as T;
+}
+
+export const api = {
+  listClusters: () => http<Cluster[]>("/api/clusters"),
+  getCluster: (id: string) => http<ClusterDetail>(`/api/clusters/${id}`),
+  listTopics: (clusterId: string, includeInternal = false) =>
+    http<Topic[]>(`/api/clusters/${clusterId}/topics?includeInternal=${includeInternal}`),
+  listConsumerGroups: (clusterId: string) =>
+    http<unknown[]>(`/api/clusters/${clusterId}/consumer-groups`),
+  search: (clusterId: string, body: SearchRequest) =>
+    http<SearchResult>(`/api/clusters/${clusterId}/search`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  cancelJob: (clusterId: string, jobId: string) =>
+    http<void>(`/api/clusters/${clusterId}/jobs/${jobId}/cancel`, { method: "POST" }),
+  listMappings: (clusterId: string, refresh = false) =>
+    http<DlqMapping[]>(`/api/clusters/${clusterId}/dlq/mappings?refresh=${refresh}`),
+  autoDetectMappings: (clusterId: string) =>
+    http<DlqMapping[]>(`/api/clusters/${clusterId}/dlq/mappings/auto-detect`, { method: "POST" }),
+  upsertMapping: (clusterId: string, body: { originTopic: string; dlqTopic: string }) =>
+    http<void>(`/api/clusters/${clusterId}/dlq/mappings`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  deleteMapping: (clusterId: string, originTopic: string, dlqTopic: string) =>
+    http<void>(
+      `/api/clusters/${clusterId}/dlq/mappings?originTopic=${encodeURIComponent(originTopic)}&dlqTopic=${encodeURIComponent(dlqTopic)}`,
+      { method: "DELETE" },
+    ),
+  readDlq: (clusterId: string, dlqTopic: string, limit = 50, fromOffset?: number) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (fromOffset != null) params.set("fromOffset", String(fromOffset));
+    return http<DlqPage>(
+      `/api/clusters/${clusterId}/dlq/topics/${encodeURIComponent(dlqTopic)}/messages?${params.toString()}`,
+    );
+  },
+  reprocess: (
+    clusterId: string,
+    dlqTopic: string,
+    targets: { partition: number; offset: number }[],
+    mode: ReprocessJob["mode"] = "GROUP",
+    notes?: string,
+  ) =>
+    http<ReprocessJob>(`/api/clusters/${clusterId}/dlq/topics/${encodeURIComponent(dlqTopic)}/reprocess`, {
+      method: "POST",
+      body: JSON.stringify({ targets, mode, notes }),
+    }),
+  reprocessHistory: (clusterId: string) =>
+    http<ReprocessJob[]>(`/api/clusters/${clusterId}/dlq/reprocess-history`),
+  publish: (
+    clusterId: string,
+    body: { topic: string; key: string | null; value: string; headers?: Record<string, string> },
+  ) =>
+    http<{ partition: number; offset: number; timestampMs: number }>(
+      `/api/clusters/${clusterId}/publish`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+};
+
+export type SearchRequest = {
+  topics: string[];
+  partitions?: number[];
+  from?: string;
+  to?: string;
+  fromOffset?: number;
+  toOffset?: number;
+  keyContains?: string;
+  valueContains?: string;
+  headerEquals?: Record<string, string>;
+  jsonFieldEquals?: Record<string, string>;
+  jsonFieldContains?: Record<string, string>;
+  maxResults?: number;
+  maxScanMessages?: number;
+  timeoutSeconds?: number;
+};

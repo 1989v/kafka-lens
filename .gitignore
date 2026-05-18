@@ -1,0 +1,23 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+.DS_Store
+.vscode/
+*.log
+
+# FE
+web/node_modules/
+web/dist/
+src/main/resources/static/*
+!src/main/resources/static/.gitkeep
+
+# Local runtime data
+data/
+*.db
+*.db-journal
+config.local.yml
+
+# Node
+.nvmrc

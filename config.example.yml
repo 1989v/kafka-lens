@@ -1,0 +1,53 @@
+# Kafka Lens configuration
+#
+# Mount this file at /app/config.yml inside the container,
+# or point the application at it via --spring.config.location.
+#
+# Any value can be overridden via environment variables using Spring's
+# relaxed binding (e.g. CLUSTERS_0_BOOTSTRAPSERVERS=...).
+
+clusters:
+  - id: local
+    name: Local Kafka
+    bootstrapServers: localhost:9092
+    # security:
+    #   protocol: SASL_SSL          # PLAINTEXT | SSL | SASL_PLAINTEXT | SASL_SSL
+    #   saslMechanism: PLAIN
+    #   saslJaasConfig: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="..." password="...";'
+    # dlqNamingPatterns:
+    #   - "{topic}.DLT"
+    #   - "dead-letter-{topic}"
+
+  # - id: staging
+  #   name: Staging MSK
+  #   bootstrapServers: b-1.staging.kafka:9094,b-2.staging.kafka:9094
+
+# Operational metadata (SQLite). Use a mounted volume to persist.
+storage:
+  sqlitePath: /app/data/kafka-lens.db
+
+# Search safety limits applied per scan job.
+scan:
+  maxMessagesPerJob: 100000
+  maxScanDurationSeconds: 120
+  defaultPageSize: 100
+
+# DLQ reprocess guards.
+dlq:
+  reprocess:
+    requireConfirmation: true       # UI must show diff before reprocessing
+    maxBatchSize: 1000              # caps single reprocess action
+    duplicateDetectionWindow: 24h   # blocks reprocessing the same DLQ msg twice within window
+
+# Authentication.
+auth:
+  mode: none  # none | basic | oidc
+  # basic:
+  #   username: admin
+  #   passwordHash: '$2a$10$...'    # bcrypt
+  # oidc:
+  #   issuerUri: https://accounts.google.com
+  #   clientId: ...
+  #   clientSecret: ...
+  #   adminClaim: groups
+  #   adminValues: [kafka-lens-admins]
