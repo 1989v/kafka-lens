@@ -20,12 +20,56 @@ export default function App() {
 
 function RootRedirect() {
   const navigate = useNavigate();
+  const [state, setState] = useState<"loading" | "empty" | "error">("loading");
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    api.listClusters().then((list) => {
-      if (list.length > 0) navigate(`/c/${list[0].id}/topics`, { replace: true });
-    });
+    api.listClusters()
+      .then((list) => {
+        if (list.length > 0) navigate(`/c/${list[0].id}/topics`, { replace: true });
+        else setState("empty");
+      })
+      .catch((e) => { setError(e.message ?? String(e)); setState("error"); });
   }, [navigate]);
-  return <div className="empty">Loading clusters…</div>;
+
+  if (state === "loading") return <div className="empty">Loading clusters…</div>;
+  if (state === "error") return (
+    <div className="empty">
+      <h2>Backend unreachable</h2>
+      <p className="muted">{error}</p>
+    </div>
+  );
+  return (
+    <div className="empty" style={{ maxWidth: 640, margin: "60px auto", textAlign: "left" }}>
+      <h1 style={{ textAlign: "center" }}>No Kafka clusters configured</h1>
+      <p>
+        Kafka Lens reads cluster definitions from a YAML file. You're seeing this screen
+        because the running instance has an empty <code>clusters</code> list.
+      </p>
+      <p>Create a <code>config.yml</code> next to the container or jar:</p>
+      <pre>{`clusters:
+  - id: local
+    name: Local Kafka
+    bootstrapServers: localhost:9092
+
+auth:
+  mode: none`}</pre>
+      <p>Then start Kafka Lens pointing at it:</p>
+      <pre>{`# JAR
+java -jar build/libs/kafka-lens.jar \\
+  --spring.config.additional-location=file:./config.yml
+
+# Docker
+docker run -p 9192:9192 \\
+  -v "$(pwd)/config.yml":/app/config.yml \\
+  -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config.yml \\
+  kafka-lens:dev`}</pre>
+      <p className="muted">
+        See <code>config.example.yml</code> in the repo for the full reference (SASL/SSL,
+        DLQ naming patterns, scan limits, auth modes).
+      </p>
+    </div>
+  );
 }
 
 function ClusterShell() {

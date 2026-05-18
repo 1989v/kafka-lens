@@ -9,7 +9,7 @@ spring:
       request-timeout: 300000
 
 server:
-  port: 8080
+  port: 9192
   forward-headers-strategy: framework
   shutdown: graceful
 

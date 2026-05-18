@@ -26,13 +26,13 @@ Kafka Lens is built around those questions.
 ## Quick start
 
 ```bash
-docker run -p 8080:8080 \
+docker run -p 9192:9192 \
   -v $(pwd)/config.yml:/app/config.yml \
   -v $(pwd)/data:/app/data \
   ghcr.io/{org}/kafka-lens:latest
 ```
 
-Then open <http://localhost:8080>.
+Then open <http://localhost:9192>.
 
 Minimal `config.yml`:
 

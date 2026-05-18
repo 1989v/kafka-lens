@@ -26,6 +26,6 @@ RUN useradd -r -u 1000 -g 0 kafka-lens && \
     chown -R kafka-lens:0 /app
 COPY --from=jar /src/build/libs/kafka-lens.jar /app/kafka-lens.jar
 USER 1000
-EXPOSE 8080
+EXPOSE 9192
 ENV JAVA_OPTS=""
 ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -jar /app/kafka-lens.jar"]

@@ -10,6 +10,9 @@ out/
 # FE
 web/node_modules/
 web/dist/
+web/tsconfig.tsbuildinfo
+web/src/**/*.js
+web/src/**/*.js.map
 src/main/resources/static/*
 !src/main/resources/static/.gitkeep
 
@@ -17,7 +20,9 @@ src/main/resources/static/*
 data/
 *.db
 *.db-journal
+config.yml
 config.local.yml
+!config.example.yml
 
 # Node
 .nvmrc
