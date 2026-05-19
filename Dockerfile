@@ -21,11 +21,12 @@ RUN ./gradlew --no-daemon bootJar -x copyWebDist -x npmBuild -x npmInstall
 # ---------- Stage 3: runtime ----------
 FROM eclipse-temurin:25-jre
 WORKDIR /app
-RUN useradd -r -u 1000 -g 0 kafka-lens && \
+RUN groupadd -r -g 10001 kafka-lens && \
+    useradd -r -u 10001 -g kafka-lens -d /app -s /sbin/nologin kafka-lens && \
     mkdir -p /app/data && \
-    chown -R kafka-lens:0 /app
-COPY --from=jar /src/build/libs/kafka-lens.jar /app/kafka-lens.jar
-USER 1000
+    chown -R kafka-lens:kafka-lens /app
+COPY --from=jar --chown=kafka-lens:kafka-lens /src/build/libs/kafka-lens.jar /app/kafka-lens.jar
+USER 10001
 EXPOSE 9192
 ENV JAVA_OPTS=""
 ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -jar /app/kafka-lens.jar"]

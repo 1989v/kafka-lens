@@ -146,6 +146,38 @@ export const api = {
     ),
 };
 
+export type BrowseMode = "LATEST" | "EARLIEST" | "FROM_OFFSET" | "FROM_TIMESTAMP" | "RANGE";
+
+export type BrowseRequest = {
+  mode: BrowseMode;
+  partitions?: number[];
+  pageSize?: number;
+  fromOffset?: Record<number, number>;
+  fromTimestamp?: string;
+  toTimestamp?: string;
+  keyContains?: string;
+  valueContains?: string;
+  timeoutSeconds?: number;
+};
+
+export type BrowsePage = {
+  messages: Message[];
+  nextCursor: Record<number, number> | null;
+  hasMore: boolean;
+  partitionsScanned: number[];
+  durationMs: number;
+};
+
+export const browseTopic = (clusterId: string, topic: string, body: BrowseRequest) =>
+  fetch(`/api/clusters/${clusterId}/topics/${encodeURIComponent(topic)}/browse`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+    return (await res.json()) as BrowsePage;
+  });
+
 export type SearchRequest = {
   topics: string[];
   partitions?: number[];
