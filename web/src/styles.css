@@ -315,6 +315,63 @@ details > summary { cursor: pointer; color: var(--fg-muted); }
 details > summary:hover { color: var(--fg); }
 details[open] > pre, details[open] > .detail-body { margin-top: 8px; }
 
+/* Topic picker (searchable combobox) ----------------------------------- */
+
+.topic-picker { position: relative; min-width: 280px; max-width: 520px; width: 100%; }
+.topic-picker-control {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.topic-picker-control:hover { border-color: var(--fg-dim); }
+.topic-picker-control input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  padding: 0;
+  font-size: 13px;
+  outline: none;
+}
+.topic-picker-value {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  gap: 8px;
+}
+.topic-picker-chevron { color: var(--fg-dim); font-size: 10px; }
+.topic-picker-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 50;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+}
+.topic-picker-option {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.topic-picker-option:hover, .topic-picker-option.active { background: rgba(88, 166, 255, 0.1); }
+.topic-picker-option code { color: var(--fg); }
+.topic-picker-meta { font-size: 11px; flex-shrink: 0; }
+
 /* Stat cards (dashboard) ----------------------------------------------- */
 
 .stat-grid {
