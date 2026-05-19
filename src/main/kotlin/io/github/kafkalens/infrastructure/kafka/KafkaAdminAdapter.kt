@@ -67,10 +67,73 @@ class KafkaAdminAdapter(private val factory: KafkaClientFactory) : KafkaAdminPor
 
     override fun listConsumerGroups(clusterId: String): List<ConsumerGroupMetadata> {
         val admin = factory.admin(clusterId)
-        val listings = admin.listConsumerGroups().all().get()
+        val listings = runCatching { admin.listConsumerGroups().all().get() }
+            .onFailure { log.warn(it) { "listConsumerGroups failed for $clusterId" } }
+            .getOrElse { return emptyList() }
         val ids = listings.map { it.groupId() }
         if (ids.isEmpty()) return emptyList()
-        return ids.mapNotNull { id -> describeGroup(admin, clusterId, id) }
+
+        // Batch 1: describe everyone at once
+        val descriptions = runCatching { admin.describeConsumerGroups(ids).all().get() }
+            .onFailure { log.warn(it) { "describeConsumerGroups batch failed" } }
+            .getOrDefault(emptyMap())
+
+        // Batch 2: pull each group's committed offsets in parallel virtual threads.
+        // The Map-based listConsumerGroupOffsets exists in kafka-clients but its
+        // batching is bounded broker-side; fanning out across virtual threads
+        // turns out to be the most consistent across broker versions.
+        val offsetsByGroup: Map<String, Map<TopicPartition, OffsetAndMetadata>> =
+            ids.parallelStream().collect(
+                java.util.stream.Collectors.toMap(
+                    { it },
+                    { gid ->
+                        runCatching {
+                            admin.listConsumerGroupOffsets(gid)
+                                .partitionsToOffsetAndMetadata()
+                                .get()
+                                .filterValues { it != null }
+                                .mapValues { it.value!! }
+                        }.getOrDefault(emptyMap())
+                    },
+                ),
+            )
+
+        // Batch 3: single listOffsets call for every distinct topic-partition.
+        val allTps = offsetsByGroup.values.flatMap { it.keys }.toSet()
+        val endOffsets: Map<TopicPartition, Long> = if (allTps.isEmpty()) emptyMap() else
+            runCatching {
+                admin.listOffsets(allTps.associateWith { OffsetSpec.latest() })
+                    .all()
+                    .get()
+                    .mapValues { it.value.offset() }
+            }.getOrDefault(emptyMap())
+
+        return ids.mapNotNull { gid ->
+            val desc = descriptions[gid] ?: return@mapNotNull null
+            val offsets = offsetsByGroup[gid] ?: emptyMap()
+            ConsumerGroupMetadata(
+                clusterId = clusterId,
+                groupId = gid,
+                state = desc.state().toString(),
+                members = desc.members().map { m ->
+                    MemberInfo(
+                        memberId = m.consumerId(),
+                        clientId = m.clientId(),
+                        host = m.host(),
+                        assignedPartitions = m.assignment().topicPartitions()
+                            .map { TopicPartitionRef(it.topic(), it.partition()) },
+                    )
+                },
+                offsets = offsets.map { (tp, om) ->
+                    GroupOffset(
+                        topic = tp.topic(),
+                        partition = tp.partition(),
+                        currentOffset = om.offset(),
+                        endOffset = endOffsets[tp] ?: om.offset(),
+                    )
+                },
+            )
+        }
     }
 
     override fun getConsumerGroup(clusterId: String, groupId: String): ConsumerGroupMetadata? =

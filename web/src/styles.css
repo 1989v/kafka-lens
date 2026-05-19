@@ -315,6 +315,40 @@ details > summary { cursor: pointer; color: var(--fg-muted); }
 details > summary:hover { color: var(--fg); }
 details[open] > pre, details[open] > .detail-body { margin-top: 8px; }
 
+/* Stat cards (dashboard) ----------------------------------------------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.stat-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+.stat-card.stat-warn { border-color: rgba(210, 153, 34, 0.5); background: rgba(210, 153, 34, 0.05); }
+.stat-card .stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+}
+.stat-card .stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--code-font);
+}
+.stat-card.stat-warn .stat-value { color: var(--warn); }
+.stat-card .stat-hint {
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-top: 4px;
+}
+
 /* Modal ----------------------------------------------------------------- */
 
 .modal-backdrop {

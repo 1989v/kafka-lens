@@ -146,6 +146,42 @@ export const api = {
     ),
 };
 
+export type TopicStats = {
+  name: string;
+  partitions: number;
+  totalMessages: number;
+  consumingGroups: number;
+  totalLag: number;
+  internal: boolean;
+};
+export type GroupStats = {
+  groupId: string;
+  state: string;
+  members: number;
+  topicCount: number;
+  totalLag: number;
+};
+export type ClusterDashboard = {
+  clusterId: string;
+  brokerCount: number;
+  brokerVersion: string | null;
+  supports: Record<string, boolean>;
+  topicCount: number;
+  internalTopicCount: number;
+  totalMessages: number;
+  consumerGroupCount: number;
+  totalLag: number;
+  topicStats: TopicStats[];
+  groupStats: GroupStats[];
+};
+
+export const fetchDashboard = (clusterId: string, includeInternal = false) =>
+  fetch(`/api/clusters/${clusterId}/dashboard?includeInternal=${includeInternal}`)
+    .then(async (r) => {
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}: ${await r.text()}`);
+      return (await r.json()) as ClusterDashboard;
+    });
+
 export type BrowseMode = "LATEST" | "EARLIEST" | "FROM_OFFSET" | "FROM_TIMESTAMP" | "RANGE";
 
 export type BrowseRequest = {

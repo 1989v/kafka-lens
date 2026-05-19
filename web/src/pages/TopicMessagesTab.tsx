@@ -166,7 +166,24 @@ export default function TopicMessagesTab({
             </tr>
           ))}
           {messages.length === 0 && !loading && (
-            <tr><td colSpan={5} className="empty">No messages.</td></tr>
+            <tr>
+              <td colSpan={5} className="empty">
+                <div>No messages.</div>
+                {(mode === "LATEST") && (keyContains || valueContains) && (
+                  <div className="muted" style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5 }}>
+                    Latest mode only checks the most recent slice of the topic.
+                    If the message could be older, switch to{" "}
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ padding: "2px 8px", fontSize: 12 }}
+                      onClick={() => { setMode("EARLIEST"); setHistory([]); }}
+                    >Earliest</button>
+                    {" "}or use the Cross-topic Search page.
+                  </div>
+                )}
+              </td>
+            </tr>
           )}
         </tbody>
       </table>

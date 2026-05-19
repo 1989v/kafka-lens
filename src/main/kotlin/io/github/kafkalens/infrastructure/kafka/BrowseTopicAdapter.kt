@@ -52,8 +52,9 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
 
             val collected = ArrayList<MessageRecord>(query.pageSize)
             val toEpochMs = query.toTimestamp?.toEpochMilli()
+            val hasFilter = !query.keyContains.isNullOrEmpty() || !query.valueContains.isNullOrEmpty()
 
-            while (collected.size < query.pageSize && System.nanoTime() < deadline) {
+            outer@ while (collected.size < query.pageSize && System.nanoTime() < deadline) {
                 val records = consumer.poll(Duration.ofMillis(500))
                 if (records.isEmpty) {
                     if (allCaughtUp(consumer, tps, end)) break
@@ -61,16 +62,17 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
                 }
                 for (record in records) {
                     if (toEpochMs != null && record.timestamp() > toEpochMs) continue
-                    collected.add(toMessage(record))
-                    if (collected.size >= query.pageSize) break
+                    val msg = toMessage(record)
+                    if (hasFilter && !passesFilter(msg, query)) continue
+                    collected.add(msg)
+                    if (collected.size >= query.pageSize) break@outer
                 }
             }
 
-            val records = postFilter(collected, query)
             val nextCursor = nextCursorFor(consumer, tps, end, query.mode)
 
             return BrowsePage(
-                messages = if (query.mode == BrowseMode.LATEST) records.sortedByDescending { it.timestamp } else records.sortedBy { it.timestamp },
+                messages = if (query.mode == BrowseMode.LATEST) collected.sortedByDescending { it.timestamp } else collected.sortedBy { it.timestamp },
                 nextCursor = nextCursor,
                 hasMore = nextCursor != null,
                 partitionsScanned = targetParts,
@@ -90,7 +92,13 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
         when (query.mode) {
             BrowseMode.EARLIEST -> tps.forEach { consumer.seek(it, beginning[it] ?: 0L) }
             BrowseMode.LATEST -> {
-                val perPartition = (query.pageSize / tps.size).coerceAtLeast(1).toLong()
+                // When a key/value filter is set the user is effectively asking
+                // "is this in the recent traffic of the topic?" — we widen the
+                // seek window dramatically so the post-filter has enough to
+                // match against. Without a filter we just want the tail page.
+                val hasFilter = !query.keyContains.isNullOrEmpty() || !query.valueContains.isNullOrEmpty()
+                val windowMultiplier = if (hasFilter) 2000L else 1L
+                val perPartition = ((query.pageSize.toLong() * windowMultiplier) / tps.size).coerceAtLeast(1L)
                 tps.forEach {
                     val endOff = end[it] ?: 0L
                     val beg = beginning[it] ?: 0L
@@ -119,12 +127,11 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
         }
     }
 
-    private fun postFilter(records: List<MessageRecord>, query: BrowseQuery): List<MessageRecord> =
-        records.filter { r ->
-            val keyOk = query.keyContains?.let { r.key?.contains(it) == true } ?: true
-            val valOk = query.valueContains?.let { r.value?.contains(it) == true } ?: true
-            keyOk && valOk
-        }
+    private fun passesFilter(msg: MessageRecord, query: BrowseQuery): Boolean {
+        val keyOk = query.keyContains?.let { needle -> msg.key?.contains(needle) == true } ?: true
+        val valOk = query.valueContains?.let { needle -> msg.value?.contains(needle) == true } ?: true
+        return keyOk && valOk
+    }
 
     private fun nextCursorFor(
         consumer: KafkaConsumer<ByteArray, ByteArray>,

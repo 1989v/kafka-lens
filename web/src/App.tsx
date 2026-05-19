@@ -8,6 +8,7 @@ import SearchPage from "./pages/SearchPage";
 import DlqPage from "./pages/DlqPage";
 import PublishPage from "./pages/PublishPage";
 import SetupGuide from "./pages/SetupGuide";
+import DashboardPage from "./pages/DashboardPage";
 
 export default function App() {
   return (
@@ -106,46 +107,3 @@ function ClusterShell() {
   );
 }
 
-function DashboardPage({ clusterId }: { clusterId: string }) {
-  const [detail, setDetail] = useState<any>(null);
-  useEffect(() => { api.getCluster(clusterId).then(setDetail); }, [clusterId]);
-  if (!detail) return <div className="page"><div className="empty">Loading cluster info…</div></div>;
-  return (
-    <>
-      <div className="breadcrumbs">
-        <span className="crumb-current">Dashboard</span>
-      </div>
-      <div className="page">
-        <div className="page-header">
-          <h1>{detail.name}</h1>
-          <span className="meta"><code>{detail.bootstrapServers}</code></span>
-        </div>
-        <div className="card">
-          <div className="card-header">Broker info</div>
-          <div className="card-body">
-            <dl className="kv">
-              <dt>Brokers</dt><dd>{detail.brokerCount}</dd>
-              <dt>Reported version</dt><dd>{detail.brokerVersion ?? "—"}</dd>
-              <dt>DLQ naming patterns</dt>
-              <dd>{detail.dlqNamingPatterns?.map((p: string) => <code key={p} style={{ marginRight: 8 }}>{p}</code>)}</dd>
-            </dl>
-          </div>
-        </div>
-        <div style={{ height: 16 }} />
-        <div className="card">
-          <div className="card-header">Supported features</div>
-          <div className="card-body">
-            <dl className="kv">
-              {Object.entries<boolean>(detail.supportedFeatures ?? {}).map(([k, v]) => (
-                <>
-                  <dt key={`${k}-dt`}>{k}</dt>
-                  <dd key={`${k}-dd`}>{v ? <span className="tag success">supported</span> : <span className="tag warn">unavailable</span>}</dd>
-                </>
-              ))}
-            </dl>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
