@@ -50,13 +50,9 @@ function TopicTabContent({
 }) {
   return (
     <>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-body">
-          <div className="row" style={{ gap: 12, alignItems: "center" }}>
-            <span className="muted" style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Topic</span>
-            <TopicPicker clusterId={clusterId} value={topic} onChange={onTopicChange} />
-          </div>
-        </div>
+      <div className="row" style={{ gap: 12, alignItems: "center", marginBottom: 16, position: "relative", zIndex: 30 }}>
+        <span className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>Topic</span>
+        <TopicPicker clusterId={clusterId} value={topic} onChange={onTopicChange} />
       </div>
 
       {topic ? (
