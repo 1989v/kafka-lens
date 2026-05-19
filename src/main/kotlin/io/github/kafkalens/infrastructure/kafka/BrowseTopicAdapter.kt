@@ -50,11 +50,20 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
 
             seek(consumer, admin, query, tps, beginning, end)
 
-            val collected = ArrayList<MessageRecord>(query.pageSize)
+            val collected = ArrayList<MessageRecord>(query.pageSize * 4)
             val toEpochMs = query.toTimestamp?.toEpochMilli()
             val hasFilter = !query.keyContains.isNullOrEmpty() || !query.valueContains.isNullOrEmpty()
+            val isLatest = query.mode == BrowseMode.LATEST
 
-            outer@ while (collected.size < query.pageSize && System.nanoTime() < deadline) {
+            // For LATEST mode we read through the entire seek window across every
+            // partition and then sort to pick the global top-pageSize. Other modes
+            // can stop as soon as they've gathered pageSize records (with filter)
+            // or hit end-of-partition.
+            val collectionCap: Int = if (isLatest)
+                (query.pageSize.toLong() * tps.size.toLong() * 2L).coerceAtMost(20_000L).toInt()
+            else query.pageSize
+
+            outer@ while (collected.size < collectionCap && System.nanoTime() < deadline) {
                 val records = consumer.poll(Duration.ofMillis(500))
                 if (records.isEmpty) {
                     if (allCaughtUp(consumer, tps, end)) break
@@ -65,14 +74,18 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
                     val msg = toMessage(record)
                     if (hasFilter && !passesFilter(msg, query)) continue
                     collected.add(msg)
-                    if (collected.size >= query.pageSize) break@outer
+                    if (collected.size >= collectionCap) break@outer
                 }
             }
 
             val nextCursor = nextCursorFor(consumer, tps, end, query.mode)
+            val finalMessages = if (isLatest)
+                collected.sortedByDescending { it.timestamp }.take(query.pageSize)
+            else
+                collected.sortedBy { it.timestamp }.take(query.pageSize)
 
             return BrowsePage(
-                messages = if (query.mode == BrowseMode.LATEST) collected.sortedByDescending { it.timestamp } else collected.sortedBy { it.timestamp },
+                messages = finalMessages,
                 nextCursor = nextCursor,
                 hasMore = nextCursor != null,
                 partitionsScanned = targetParts,
@@ -92,13 +105,17 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
         when (query.mode) {
             BrowseMode.EARLIEST -> tps.forEach { consumer.seek(it, beginning[it] ?: 0L) }
             BrowseMode.LATEST -> {
-                // When a key/value filter is set the user is effectively asking
-                // "is this in the recent traffic of the topic?" — we widen the
-                // seek window dramatically so the post-filter has enough to
-                // match against. Without a filter we just want the tail page.
+                // For "latest" we want the most recent pageSize messages across the
+                // whole topic, not per-partition. Each partition seeks back by the
+                // full pageSize so the caller can grab whatever recent records exist
+                // (idle partitions contribute zero, hot partitions can carry the page
+                // on their own). The collection loop and post-sort handle taking
+                // only pageSize records globally by timestamp desc.
+                //
+                // With a filter set we widen the seek further so the inline filter
+                // has more material to match against.
                 val hasFilter = !query.keyContains.isNullOrEmpty() || !query.valueContains.isNullOrEmpty()
-                val windowMultiplier = if (hasFilter) 2000L else 1L
-                val perPartition = ((query.pageSize.toLong() * windowMultiplier) / tps.size).coerceAtLeast(1L)
+                val perPartition = query.pageSize.toLong() * (if (hasFilter) 2000L else 1L)
                 tps.forEach {
                     val endOff = end[it] ?: 0L
                     val beg = beginning[it] ?: 0L
