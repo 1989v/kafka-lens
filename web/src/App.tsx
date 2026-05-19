@@ -9,6 +9,7 @@ import DlqPage from "./pages/DlqPage";
 import PublishPage from "./pages/PublishPage";
 import SetupGuide from "./pages/SetupGuide";
 import DashboardPage from "./pages/DashboardPage";
+import BrokersPage from "./pages/BrokersPage";
 
 export default function App() {
   return (
@@ -79,6 +80,7 @@ function ClusterShell() {
           <div className="nav-group">
             <h3>Cluster</h3>
             <NavLink to={`/c/${clusterId}/dashboard`}>Dashboard</NavLink>
+            <NavLink to={`/c/${clusterId}/brokers`}>Brokers</NavLink>
             <NavLink to={`/c/${clusterId}/topics`}>Topics</NavLink>
             <NavLink to={`/c/${clusterId}/consumer-groups`}>Consumer Groups</NavLink>
           </div>
@@ -94,6 +96,7 @@ function ClusterShell() {
       <main className="content">
         <Routes>
           <Route path="dashboard" element={<DashboardPage clusterId={clusterId} />} />
+          <Route path="brokers" element={<BrokersPage clusterId={clusterId} />} />
           <Route path="topics" element={<TopicsPage clusterId={clusterId} />} />
           <Route path="topics/:topicName/*" element={<TopicDetailPage clusterId={clusterId} />} />
           <Route path="consumer-groups" element={<ConsumerGroupsPage clusterId={clusterId} />} />

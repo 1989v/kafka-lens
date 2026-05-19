@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Topic, api } from "../api";
+import NewTopicModal from "./NewTopicModal";
 
 export default function TopicsPage({ clusterId }: { clusterId: string }) {
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -11,15 +12,18 @@ export default function TopicsPage({ clusterId }: { clusterId: string }) {
     key: "name",
     dir: 1,
   });
+  const [showNewTopic, setShowNewTopic] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const load = () => {
     if (!clusterId) return;
     setLoading(true);
     api.listTopics(clusterId, includeInternal)
       .then(setTopics)
       .finally(() => setLoading(false));
-  }, [clusterId, includeInternal]);
+  };
+
+  useEffect(() => { load(); /* eslint-disable-line */ }, [clusterId, includeInternal]);
 
   const visible = useMemo(() => {
     const filtered = topics.filter((t) => t.name.toLowerCase().includes(filter.toLowerCase()));
@@ -43,7 +47,10 @@ export default function TopicsPage({ clusterId }: { clusterId: string }) {
       <div className="page">
         <div className="page-header">
           <h1>Topics</h1>
-          <span className="meta">{visible.length} of {topics.length}</span>
+          <div className="row">
+            <span className="meta">{visible.length} of {topics.length}</span>
+            <button onClick={() => setShowNewTopic(true)} type="button">+ New topic</button>
+          </div>
         </div>
 
         <div className="kl-table-wrap">
@@ -95,6 +102,17 @@ export default function TopicsPage({ clusterId }: { clusterId: string }) {
           )}
         </div>
       </div>
+      {showNewTopic && (
+        <NewTopicModal
+          clusterId={clusterId}
+          onClose={() => setShowNewTopic(false)}
+          onCreated={(name) => {
+            setShowNewTopic(false);
+            load();
+            navigate(`/c/${clusterId}/topics/${encodeURIComponent(name)}/messages`);
+          }}
+        />
+      )}
     </>
   );
 }

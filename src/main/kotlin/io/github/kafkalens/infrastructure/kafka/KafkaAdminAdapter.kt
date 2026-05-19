@@ -2,7 +2,14 @@ package io.github.kafkalens.infrastructure.kafka
 
 import io.github.kafkalens.domain.cluster.BrokerFeatureMatrix
 import io.github.kafkalens.domain.cluster.BrokerFeatureMatrix.Feature
+import io.github.kafkalens.domain.ports.BrokerInfo
 import io.github.kafkalens.domain.ports.KafkaAdminPort
+import io.github.kafkalens.domain.ports.TopicConfigEntry
+import org.apache.kafka.clients.admin.AlterConfigOp
+import org.apache.kafka.clients.admin.ConfigEntry
+import org.apache.kafka.clients.admin.NewPartitions
+import org.apache.kafka.clients.admin.NewTopic
+import org.apache.kafka.common.config.ConfigResource
 import io.github.kafkalens.domain.topic.ConsumerGroupMetadata
 import io.github.kafkalens.domain.topic.GroupOffset
 import io.github.kafkalens.domain.topic.MemberInfo
@@ -178,6 +185,95 @@ class KafkaAdminAdapter(private val factory: KafkaClientFactory) : KafkaAdminPor
                 )
             },
         )
+    }
+
+    override fun describeTopicConfigs(clusterId: String, topic: String): List<TopicConfigEntry> {
+        val admin = factory.admin(clusterId)
+        val resource = ConfigResource(ConfigResource.Type.TOPIC, topic)
+        val config = runCatching { admin.describeConfigs(listOf(resource)).all().get()[resource] }
+            .onFailure { log.warn(it) { "describeConfigs failed for $clusterId/$topic" } }
+            .getOrNull()
+            ?: return emptyList()
+        return config.entries().map { e: ConfigEntry ->
+            TopicConfigEntry(
+                name = e.name(),
+                value = if (e.isSensitive) null else e.value(),
+                source = e.source().name,
+                isDefault = e.source() == ConfigEntry.ConfigSource.DEFAULT_CONFIG,
+                readOnly = e.isReadOnly,
+                sensitive = e.isSensitive,
+                documentation = e.documentation(),
+            )
+        }.sortedBy { it.name }
+    }
+
+    override fun createTopic(
+        clusterId: String,
+        name: String,
+        numPartitions: Int,
+        replicationFactor: Short,
+        configs: Map<String, String>,
+    ) {
+        val admin = factory.admin(clusterId)
+        val newTopic = NewTopic(name, numPartitions, replicationFactor).configs(configs)
+        admin.createTopics(listOf(newTopic)).all().get()
+    }
+
+    override fun deleteTopic(clusterId: String, name: String) {
+        val admin = factory.admin(clusterId)
+        admin.deleteTopics(listOf(name)).all().get()
+    }
+
+    override fun addPartitions(clusterId: String, name: String, totalPartitions: Int) {
+        val admin = factory.admin(clusterId)
+        admin.createPartitions(mapOf(name to NewPartitions.increaseTo(totalPartitions))).all().get()
+    }
+
+    override fun alterTopicConfigs(clusterId: String, name: String, entries: Map<String, String?>) {
+        val admin = factory.admin(clusterId)
+        val resource = ConfigResource(ConfigResource.Type.TOPIC, name)
+        val ops = entries.map { (k, v) ->
+            if (v == null) AlterConfigOp(ConfigEntry(k, ""), AlterConfigOp.OpType.DELETE)
+            else AlterConfigOp(ConfigEntry(k, v), AlterConfigOp.OpType.SET)
+        }
+        admin.incrementalAlterConfigs(mapOf(resource to ops)).all().get()
+    }
+
+    override fun listBrokers(clusterId: String): List<BrokerInfo> {
+        val admin = factory.admin(clusterId)
+        val clusterDesc = admin.describeCluster()
+        val nodes = clusterDesc.nodes().get()
+        val controllerId = runCatching { clusterDesc.controller().get()?.id() }.getOrNull()
+
+        // Aggregate partition load per broker from a fresh topic listing. This
+        // costs an extra describeTopics roundtrip, but the brokers page is opt-in
+        // so the cost only lands when the user navigates to it.
+        val leaderCount = HashMap<Int, Int>(nodes.size)
+        val replicaCount = HashMap<Int, Int>(nodes.size)
+        runCatching {
+            val topicNames = admin.listTopics().names().get().filter { !it.startsWith("_") }
+            if (topicNames.isNotEmpty()) {
+                val descs = admin.describeTopics(topicNames).allTopicNames().get()
+                descs.values.forEach { td ->
+                    td.partitions().forEach { p ->
+                        p.leader()?.id()?.let { leaderId -> leaderCount.merge(leaderId, 1, Int::plus) }
+                        p.replicas().forEach { r -> replicaCount.merge(r.id(), 1, Int::plus) }
+                    }
+                }
+            }
+        }.onFailure { log.warn(it) { "partition load aggregation failed" } }
+
+        return nodes.map { n ->
+            BrokerInfo(
+                id = n.id(),
+                host = n.host(),
+                port = n.port(),
+                rack = n.rack(),
+                leaderPartitions = leaderCount[n.id()] ?: 0,
+                totalReplicas = replicaCount[n.id()] ?: 0,
+                isController = controllerId != null && n.id() == controllerId,
+            )
+        }.sortedBy { it.id }
     }
 
     override fun brokerFeatures(clusterId: String): BrokerFeatureMatrix {

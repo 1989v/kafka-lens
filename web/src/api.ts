@@ -146,6 +146,64 @@ export const api = {
     ),
 };
 
+export type BrokerInfo = {
+  id: number;
+  host: string;
+  port: number;
+  rack: string | null;
+  leaderPartitions: number;
+  totalReplicas: number;
+  isController: boolean;
+};
+
+export const fetchBrokers = (clusterId: string) =>
+  fetch(`/api/clusters/${clusterId}/brokers`).then(async (r) => {
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}: ${await r.text()}`);
+    return (await r.json()) as BrokerInfo[];
+  });
+
+export type TopicConfigEntry = {
+  name: string;
+  value: string | null;
+  source: string;
+  isDefault: boolean;
+  readOnly: boolean;
+  sensitive: boolean;
+  documentation: string | null;
+};
+
+export const fetchTopicConfigs = (clusterId: string, topic: string) =>
+  fetch(`/api/clusters/${clusterId}/topics/${encodeURIComponent(topic)}/configs`)
+    .then(async (r) => {
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}: ${await r.text()}`);
+      return (await r.json()) as TopicConfigEntry[];
+    });
+
+async function httpVoid(input: string, init?: RequestInit): Promise<void> {
+  const res = await fetch(input, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+}
+
+export const createTopic = (
+  clusterId: string,
+  body: { name: string; numPartitions: number; replicationFactor: number; configs?: Record<string, string> },
+) => httpVoid(`/api/clusters/${clusterId}/topics`, { method: "POST", body: JSON.stringify(body) });
+
+export const deleteTopic = (clusterId: string, name: string) =>
+  httpVoid(`/api/clusters/${clusterId}/topics/${encodeURIComponent(name)}`, { method: "DELETE" });
+
+export const addPartitions = (clusterId: string, name: string, totalPartitions: number) =>
+  httpVoid(`/api/clusters/${clusterId}/topics/${encodeURIComponent(name)}/partitions`, {
+    method: "POST",
+    body: JSON.stringify({ totalPartitions }),
+  });
+
+export const alterTopicConfigs = (clusterId: string, name: string, entries: Record<string, string | null>) =>
+  httpVoid(`/api/clusters/${clusterId}/topics/${encodeURIComponent(name)}/configs`, {
+    method: "PUT",
+    body: JSON.stringify({ entries }),
+  });
+
 export type TopicStats = {
   name: string;
   partitions: number;
