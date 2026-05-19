@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { Topic, api } from "../api";
 import TopicMessagesTab from "./TopicMessagesTab";
+import TopicStatsTab from "./TopicStatsTab";
 
 export default function TopicDetailPage({ clusterId }: { clusterId: string }) {
   const { topicName: rawTopicName = "" } = useParams();
@@ -40,6 +41,7 @@ export default function TopicDetailPage({ clusterId }: { clusterId: string }) {
 
         <div className="tabs">
           <NavLink end to={`/c/${clusterId}/topics/${encodeURIComponent(topicName)}/messages`}>Messages</NavLink>
+          <NavLink end to={`/c/${clusterId}/topics/${encodeURIComponent(topicName)}/stats`}>Stats</NavLink>
           <NavLink end to={`/c/${clusterId}/topics/${encodeURIComponent(topicName)}/overview`}>Overview</NavLink>
         </div>
 
@@ -48,6 +50,7 @@ export default function TopicDetailPage({ clusterId }: { clusterId: string }) {
         ) : (
           <Routes>
             <Route path="messages" element={<TopicMessagesTab clusterId={clusterId} topicName={topicName} topic={topic} />} />
+            <Route path="stats" element={<TopicStatsTab clusterId={clusterId} topicName={topicName} />} />
             <Route path="overview" element={<OverviewTab topic={topic} />} />
             <Route path="*" element={<Navigate to="messages" replace />} />
           </Routes>

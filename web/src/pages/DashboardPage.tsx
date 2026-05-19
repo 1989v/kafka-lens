@@ -14,7 +14,7 @@ export default function DashboardPage({ clusterId }: { clusterId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [includeInternal, setIncludeInternal] = useState(false);
-  const [refreshMs, setRefreshMs] = useState(15_000);
+  const [refreshMs, setRefreshMs] = useState(0);
   const [topicFilter, setTopicFilter] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
