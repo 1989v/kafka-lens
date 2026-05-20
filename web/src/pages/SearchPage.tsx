@@ -151,13 +151,19 @@ function MessageModal({ message, onClose }: { message: Message; onClose: () => v
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="mono">{message.topic} <span className="muted">/ p{message.partition} · o{message.offset}</span></div>
+          <div className="mono">
+            {message.topic} <span className="muted">/ p{message.partition} · o{message.offset}</span>
+            {message.encoding === "AVRO" && message.schemaId != null && (
+              <span className="tag accent" style={{ marginLeft: 10 }}>Avro · schema #{message.schemaId}</span>
+            )}
+          </div>
           <button className="secondary icon" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <dl className="kv" style={{ marginBottom: 16 }}>
             <dt>Timestamp</dt><dd>{new Date(message.timestamp).toISOString()}</dd>
             <dt>Key</dt><dd>{message.key ?? "—"}</dd>
+            {message.encoding && <><dt>Encoding</dt><dd>{message.encoding}</dd></>}
           </dl>
           <pre>{pretty || <span className="muted">(empty)</span>}</pre>
           {Object.keys(message.headers).length > 0 && (

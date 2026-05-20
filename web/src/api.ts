@@ -22,6 +22,7 @@ export type Topic = {
   internal: boolean;
   totalMessages: number;
 };
+export type ValueEncoding = "UTF8" | "AVRO" | "FALLBACK_BASE64";
 export type Message = {
   topic: string;
   partition: number;
@@ -30,6 +31,8 @@ export type Message = {
   key: string | null;
   value: string | null;
   headers: Record<string, string>;
+  encoding?: ValueEncoding;
+  schemaId?: number | null;
 };
 export type SearchResult = {
   jobId: string;

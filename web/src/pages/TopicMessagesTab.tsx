@@ -219,6 +219,9 @@ function MessageModal({ message, onClose }: { message: Message; onClose: () => v
         <div className="modal-header">
           <div className="mono">
             {message.topic} <span className="muted">/ p{message.partition} · o{message.offset}</span>
+            {message.encoding === "AVRO" && message.schemaId != null && (
+              <span className="tag accent" style={{ marginLeft: 10 }}>Avro · schema #{message.schemaId}</span>
+            )}
           </div>
           <button className="secondary icon" onClick={onClose} type="button">✕</button>
         </div>
@@ -226,6 +229,7 @@ function MessageModal({ message, onClose }: { message: Message; onClose: () => v
           <dl className="kv" style={{ marginBottom: 16 }}>
             <dt>Timestamp</dt><dd>{new Date(message.timestamp).toISOString()}</dd>
             <dt>Key</dt><dd>{message.key ?? "—"}</dd>
+            {message.encoding && <><dt>Encoding</dt><dd>{message.encoding}</dd></>}
           </dl>
           <h3 style={{ fontSize: 12, color: "var(--fg-muted)", textTransform: "uppercase", letterSpacing: ".06em", margin: "4px 0" }}>Value</h3>
           <pre>{prettyValue || <span className="muted">(empty)</span>}</pre>

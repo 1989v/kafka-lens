@@ -3,6 +3,7 @@ package io.github.kafkalens.infrastructure.kafka
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.kafkalens.domain.message.MessageRecord
+import io.github.kafkalens.infrastructure.schemaregistry.MessageDecoder
 import io.github.kafkalens.domain.ports.MessageScannerPort
 import io.github.kafkalens.domain.ports.ProgressSink
 import io.github.kafkalens.domain.search.SearchProgress
@@ -26,6 +27,7 @@ private val log = KotlinLogging.logger {}
 class MessageScannerAdapter(
     private val factory: KafkaClientFactory,
     private val objectMapper: ObjectMapper,
+    private val decoder: MessageDecoder,
 ) : MessageScannerPort {
 
     override fun scan(
@@ -73,7 +75,7 @@ class MessageScannerAdapter(
                     val ts = Instant.ofEpochMilli(record.timestamp())
                     if (query.to != null && ts.isAfter(query.to)) continue
                     if (query.toOffset != null && record.offset() > query.toOffset) continue
-                    val msg = toMessage(record)
+                    val msg = toMessage(record, query.clusterId)
                     if (matches(msg, query)) {
                         matched.add(msg)
                         if (matched.size >= query.maxResults) { limitsHit += LimitKind.MAX_RESULTS; break@outer }
@@ -165,9 +167,9 @@ class MessageScannerAdapter(
         return true
     }
 
-    private fun toMessage(record: ConsumerRecord<ByteArray, ByteArray>): MessageRecord {
+    private fun toMessage(record: ConsumerRecord<ByteArray, ByteArray>, clusterId: String): MessageRecord {
         val key = record.key()?.toString(StandardCharsets.UTF_8)
-        val value = record.value()?.toString(StandardCharsets.UTF_8)
+        val decoded = decoder.decodeValue(clusterId, record.value())
         val headers = record.headers().associate { h ->
             h.key() to (h.value()?.toString(StandardCharsets.UTF_8) ?: "")
         }
@@ -177,8 +179,10 @@ class MessageScannerAdapter(
             offset = record.offset(),
             timestamp = Instant.ofEpochMilli(record.timestamp()),
             key = key,
-            value = value,
+            value = decoded.text,
             headers = headers,
+            encoding = decoded.encoding,
+            schemaId = decoded.schemaId,
         )
     }
 

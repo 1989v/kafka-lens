@@ -4,6 +4,7 @@ import io.github.kafkalens.domain.dlq.DlqMessage
 import io.github.kafkalens.domain.message.MessageRecord
 import io.github.kafkalens.domain.ports.DlqReaderPort
 import io.github.kafkalens.infrastructure.kafka.KafkaClientFactory
+import io.github.kafkalens.infrastructure.schemaregistry.MessageDecoder
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.springframework.stereotype.Component
@@ -13,7 +14,10 @@ import java.time.Instant
 import java.util.UUID
 
 @Component
-class DlqReaderAdapter(private val factory: KafkaClientFactory) : DlqReaderPort {
+class DlqReaderAdapter(
+    private val factory: KafkaClientFactory,
+    private val decoder: MessageDecoder,
+) : DlqReaderPort {
 
     /**
      * Read a page of DLQ messages. We pull a small window using a transient consumer
@@ -45,7 +49,7 @@ class DlqReaderAdapter(private val factory: KafkaClientFactory) : DlqReaderPort 
                 val records = consumer.poll(Duration.ofMillis(300))
                 if (records.isEmpty) break
                 for (record in records) {
-                    out += toDlqMessage(record)
+                    out += toDlqMessage(record, clusterId)
                     if (out.size >= limit) break
                 }
             }
@@ -58,18 +62,21 @@ class DlqReaderAdapter(private val factory: KafkaClientFactory) : DlqReaderPort 
         return page.firstOrNull { it.record.partition == partition && it.record.offset == offset }
     }
 
-    private fun toDlqMessage(record: ConsumerRecord<ByteArray, ByteArray>): DlqMessage {
+    private fun toDlqMessage(record: ConsumerRecord<ByteArray, ByteArray>, clusterId: String): DlqMessage {
         val headers = record.headers().associate { h ->
             h.key() to (h.value()?.toString(StandardCharsets.UTF_8) ?: "")
         }
+        val decoded = decoder.decodeValue(clusterId, record.value())
         val msg = MessageRecord(
             topic = record.topic(),
             partition = record.partition(),
             offset = record.offset(),
             timestamp = Instant.ofEpochMilli(record.timestamp()),
             key = record.key()?.toString(StandardCharsets.UTF_8),
-            value = record.value()?.toString(StandardCharsets.UTF_8),
+            value = decoded.text,
             headers = headers,
+            encoding = decoded.encoding,
+            schemaId = decoded.schemaId,
         )
         return DlqMessage(
             record = msg,

@@ -2,6 +2,7 @@ package io.github.kafkalens.infrastructure.kafka
 
 import io.github.kafkalens.domain.message.MessageRecord
 import io.github.kafkalens.domain.ports.BrowseTopicPort
+import io.github.kafkalens.infrastructure.schemaregistry.MessageDecoder
 import io.github.kafkalens.domain.search.BrowseMode
 import io.github.kafkalens.domain.search.BrowsePage
 import io.github.kafkalens.domain.search.BrowseQuery
@@ -26,7 +27,10 @@ private val log = KotlinLogging.logger {}
  * so two concurrent browses don't share assignments or step on each other.
  */
 @Component
-class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicPort {
+class BrowseTopicAdapter(
+    private val factory: KafkaClientFactory,
+    private val decoder: MessageDecoder,
+) : BrowseTopicPort {
 
     override fun browse(query: BrowseQuery): BrowsePage {
         val started = System.nanoTime()
@@ -71,7 +75,7 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
                 }
                 for (record in records) {
                     if (toEpochMs != null && record.timestamp() > toEpochMs) continue
-                    val msg = toMessage(record)
+                    val msg = toMessage(record, query.clusterId)
                     if (hasFilter && !passesFilter(msg, query)) continue
                     collected.add(msg)
                     if (collected.size >= collectionCap) break@outer
@@ -177,17 +181,22 @@ class BrowseTopicAdapter(private val factory: KafkaClientFactory) : BrowseTopicP
         pos != null && pos >= (end[tp] ?: pos)
     }
 
-    private fun toMessage(record: ConsumerRecord<ByteArray, ByteArray>): MessageRecord = MessageRecord(
-        topic = record.topic(),
-        partition = record.partition(),
-        offset = record.offset(),
-        timestamp = Instant.ofEpochMilli(record.timestamp()),
-        key = record.key()?.toString(StandardCharsets.UTF_8),
-        value = record.value()?.toString(StandardCharsets.UTF_8),
-        headers = record.headers().associate { h ->
-            h.key() to (h.value()?.toString(StandardCharsets.UTF_8) ?: "")
-        },
-    )
+    private fun toMessage(record: ConsumerRecord<ByteArray, ByteArray>, clusterId: String): MessageRecord {
+        val decoded = decoder.decodeValue(clusterId, record.value())
+        return MessageRecord(
+            topic = record.topic(),
+            partition = record.partition(),
+            offset = record.offset(),
+            timestamp = Instant.ofEpochMilli(record.timestamp()),
+            key = record.key()?.toString(StandardCharsets.UTF_8),
+            value = decoded.text,
+            headers = record.headers().associate { h ->
+                h.key() to (h.value()?.toString(StandardCharsets.UTF_8) ?: "")
+            },
+            encoding = decoded.encoding,
+            schemaId = decoded.schemaId,
+        )
+    }
 
     private fun emptyPage(durationMs: Long) = BrowsePage(
         messages = emptyList(),

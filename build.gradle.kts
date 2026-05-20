@@ -37,6 +37,7 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.46.1.3")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
+    implementation("org.apache.avro:avro:1.12.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.mockito")
