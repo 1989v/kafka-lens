@@ -111,7 +111,8 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          outputs: type=image,"name=${{ needs.prepare.outputs.repos }}",push-by-digest=true,name-canonical=true,push=true
+          tags: ${{ needs.prepare.outputs.repos }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.pair }}
           cache-to: type=gha,mode=max,scope=${{ matrix.pair }}
           provenance: false
