@@ -84,6 +84,14 @@ docker run -p 9192:9192 \
   ghcr.io/1989v/kafka-lens:latest
 ```
 
+Docker Hub 에서도 받을 수 있습니다 (발행 이후):
+
+```bash
+docker pull 1989v/kafka-lens:latest
+```
+
+이미지는 multi-arch — `linux/amd64`, `linux/arm64` 모두 빌드됨 (Apple Silicon, Raspberry Pi 4+, OCI Ampere A1 등).
+
 브라우저에서 <http://localhost:9192>.
 
 Kafka 까지 함께 띄우는 예시: [`docker-compose.example.yml`](./docker-compose.example.yml).

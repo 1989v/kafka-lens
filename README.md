@@ -84,6 +84,14 @@ docker run -p 9192:9192 \
   ghcr.io/1989v/kafka-lens:latest
 ```
 
+Or from Docker Hub (once published):
+
+```bash
+docker pull 1989v/kafka-lens:latest
+```
+
+Multi-arch images are built for `linux/amd64` and `linux/arm64` (works on Apple Silicon, Raspberry Pi 4+, OCI Ampere A1, etc.).
+
 Open <http://localhost:9192>.
 
 See [`docker-compose.example.yml`](./docker-compose.example.yml) for a working Kafka-alongside setup.
