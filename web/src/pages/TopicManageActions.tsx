@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Topic, addPartitions, deleteTopic } from "../api";
+import { useFeature } from "../AppInfoContext";
 
 /**
  * Action bar shown on the Topic Detail header. Hosts the dangerous-or-
  * structural operations (delete topic, increase partitions) behind their
  * own confirmation modals so a misclick never wipes data.
+ *
+ * Whole bar stays hidden unless the operator enabled the
+ * TOPICOPS_ALLOWDESTRUCTIVE feature flag — the corresponding API
+ * endpoints reject the calls with HTTP 403 either way.
  */
 export default function TopicManageActions({
   clusterId,
@@ -16,7 +21,11 @@ export default function TopicManageActions({
   topic: Topic | null;
   topicName: string;
 }) {
+  const allowed = useFeature("allowDestructiveTopicOps");
   const [mode, setMode] = useState<"none" | "delete" | "grow">("none");
+
+  if (!allowed) return null;
+
   return (
     <>
       <div className="row" style={{ gap: 8 }}>

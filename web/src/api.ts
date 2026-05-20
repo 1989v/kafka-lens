@@ -324,6 +324,19 @@ export const fetchTopicStats = (clusterId: string, topic: string) =>
       return (await r.json()) as TopicStatsPayload;
     });
 
+export type AppInfo = {
+  product: string;
+  version: string;
+  clusterCount: number;
+  features: { allowDestructiveTopicOps: boolean };
+};
+
+export const fetchAppInfo = () =>
+  fetch(`/api/info`).then(async (r) => {
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}: ${await r.text()}`);
+    return (await r.json()) as AppInfo;
+  });
+
 export const fetchDashboard = (clusterId: string, includeInternal = false) =>
   fetch(`/api/clusters/${clusterId}/dashboard?includeInternal=${includeInternal}`)
     .then(async (r) => {

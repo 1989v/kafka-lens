@@ -12,6 +12,7 @@ data class KafkaLensProperties(
     val scan: ScanProps = ScanProps(),
     val dlq: DlqProps = DlqProps(),
     val auth: AuthProps = AuthProps(),
+    val topicOps: TopicOpsProps = TopicOpsProps(),
 ) {
     data class ClusterProps(
         var id: String = "",
@@ -82,6 +83,17 @@ data class KafkaLensProperties(
     )
 
     data class BasicAuthProps(var username: String = "", var passwordHash: String = "")
+
+    data class TopicOpsProps(
+        /**
+         * Gate for destructive topic write operations — DELETE topic and
+         * POST /topics/{name}/partitions (add partitions). OFF by default so
+         * an accidental click can never wipe a topic or trigger a key-rehash.
+         * Set TOPICOPS_ALLOWDESTRUCTIVE=true (or yaml topic-ops.allow-destructive: true)
+         * to expose the UI controls and unlock the API.
+         */
+        var allowDestructive: Boolean = false,
+    )
 
     data class OidcAuthProps(
         var issuerUri: String = "",

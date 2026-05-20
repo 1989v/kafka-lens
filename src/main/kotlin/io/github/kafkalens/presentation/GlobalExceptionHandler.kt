@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.server.ResponseStatusException
 
 private val log = KotlinLogging.logger {}
 
@@ -31,6 +32,18 @@ class GlobalExceptionHandler {
     fun handleConnectNotConfigured(ex: ConnectNotConfigured): ResponseEntity<ApiError> =
         ApiError("CONNECT_NOT_CONFIGURED", ex.message ?: "Kafka Connect endpoint not configured")
             .toResponse(HttpStatus.PRECONDITION_FAILED)
+
+    @ExceptionHandler(ResponseStatusException::class)
+    fun handleResponseStatus(ex: ResponseStatusException): ResponseEntity<ApiError> {
+        val status = HttpStatus.resolve(ex.statusCode.value()) ?: HttpStatus.INTERNAL_SERVER_ERROR
+        val code = when (status) {
+            HttpStatus.FORBIDDEN -> "FORBIDDEN"
+            HttpStatus.NOT_FOUND -> "NOT_FOUND"
+            HttpStatus.PRECONDITION_FAILED -> "PRECONDITION_FAILED"
+            else -> "STATUS_${status.value()}"
+        }
+        return ApiError(code, ex.reason ?: status.reasonPhrase).toResponse(status)
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ApiError> {

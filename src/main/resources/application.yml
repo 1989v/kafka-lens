@@ -48,3 +48,9 @@ dlq:
 
 auth:
   mode: none
+
+topic-ops:
+  # Destructive topic operations (delete topic, add partitions) are OFF by
+  # default. Enable with env TOPICOPS_ALLOWDESTRUCTIVE=true to expose the
+  # buttons in the UI and unlock the corresponding endpoints.
+  allow-destructive: false

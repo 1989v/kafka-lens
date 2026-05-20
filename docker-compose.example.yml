@@ -55,6 +55,9 @@ services:
       # CLUSTERS_1_BOOTSTRAPSERVERS: b-1.staging.kafka:9094,b-2.staging.kafka:9094
 
       AUTH_MODE: ${AUTH_MODE:-none}
+      # Destructive topic ops (delete + add partitions) — keep OFF unless
+      # operators explicitly need them. Default false.
+      TOPICOPS_ALLOWDESTRUCTIVE: ${TOPICOPS_ALLOWDESTRUCTIVE:-false}
       STORAGE_SQLITEPATH: ${STORAGE_SQLITEPATH:-/app/data/kafka-lens.db}
       SCAN_MAXMESSAGESPERJOB: ${SCAN_MAXMESSAGESPERJOB:-100000}
       SCAN_MAXSCANDURATIONSECONDS: ${SCAN_MAXSCANDURATIONSECONDS:-120}

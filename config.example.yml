@@ -42,6 +42,12 @@ dlq:
 # Authentication.
 auth:
   mode: none  # none | basic | oidc
+
+# Destructive topic ops (delete topic + add partitions) are gated behind
+# this flag. Default false — the UI hides the buttons and the API
+# refuses the corresponding requests with HTTP 403.
+topic-ops:
+  allow-destructive: false
   # basic:
   #   username: admin
   #   passwordHash: '$2a$10$...'    # bcrypt

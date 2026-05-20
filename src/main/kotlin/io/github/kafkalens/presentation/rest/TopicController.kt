@@ -11,6 +11,8 @@ import io.github.kafkalens.domain.ports.KafkaAdminPort
 import io.github.kafkalens.domain.ports.TopicConfigEntry
 import io.github.kafkalens.domain.topic.ConsumerGroupMetadata
 import io.github.kafkalens.domain.topic.TopicMetadata
+import io.github.kafkalens.infrastructure.config.KafkaLensProperties
+import io.github.kafkalens.presentation.DestructiveOpsDisabled
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -32,6 +34,7 @@ class TopicController(
     private val addPartitions: AddPartitionsUseCase,
     private val alterTopicConfigs: AlterTopicConfigsUseCase,
     private val admin: KafkaAdminPort,
+    private val props: KafkaLensProperties,
 ) {
     @GetMapping("/topics")
     fun topics(
@@ -63,6 +66,7 @@ class TopicController(
 
     @DeleteMapping("/topics/{name}")
     fun delete(@PathVariable clusterId: String, @PathVariable name: String) {
+        if (!props.topicOps.allowDestructive) throw DestructiveOpsDisabled()
         deleteTopic.execute(clusterId, name)
     }
 
@@ -72,6 +76,7 @@ class TopicController(
         @PathVariable name: String,
         @RequestBody req: AddPartitionsRequest,
     ) {
+        if (!props.topicOps.allowDestructive) throw DestructiveOpsDisabled()
         addPartitions.execute(clusterId, name, req.totalPartitions)
     }
 
