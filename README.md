@@ -240,20 +240,6 @@ Kafka Lens is meant for **trusted networks** — homelabs, VPNs, internal Kubern
 
 Do **not** expose Kafka Lens to the public internet without a reverse proxy that adds TLS + authentication.
 
-## Roadmap
-
-- [x] Multi-cluster via env + YAML
-- [x] Free-text + JSON-path search, cross-topic search, correlation-id trace
-- [x] DLQ auto-detect + reprocess-only flow
-- [x] Per-topic lag charts (10-min rolling window)
-- [x] Kafka Connect integration
-- [x] Confluent Schema Registry Avro decode
-- [x] Destructive-ops feature gate
-- [ ] OIDC / Basic auth adapters (M5)
-- [ ] PII masking rules per topic field (M6)
-- [ ] Multi-arch GitHub Actions build → `ghcr.io/1989v/kafka-lens` (M6)
-- [ ] MCP server endpoint so AI assistants can query the cluster (M6)
-
 ## Contributing
 
 Issues and PRs welcome. The codebase is intentionally lean — pure Spring Boot + Kotlin backend, React + Vite frontend, no microservices. See [`CLAUDE.md`](./CLAUDE.md) for AI-assisted contribution notes if you use Claude Code or similar tools.

@@ -240,20 +240,6 @@ Kafka Lens 는 **신뢰된 네트워크** (홈랩, VPN, 사내 K8s) 안에서 �
 
 **공용 인터넷에 직접 노출 금지**. reverse proxy + TLS + 인증 필수.
 
-## 로드맵
-
-- [x] env + YAML 멀티 클러스터
-- [x] free-text + JSON-path 검색, 토픽 횡단 검색, correlation-id trace
-- [x] DLQ 자동 탐지 + 재처리 전용 흐름
-- [x] 토픽별 lag 시계열 차트 (10분 윈도우)
-- [x] Kafka Connect 통합
-- [x] Confluent Schema Registry Avro 디코딩
-- [x] Destructive ops 기능 게이트
-- [ ] OIDC / Basic auth 어댑터 (M5)
-- [ ] 토픽 필드별 PII 마스킹 룰 (M6)
-- [ ] Multi-arch GitHub Actions 빌드 → `ghcr.io/1989v/kafka-lens` (M6)
-- [ ] AI 어시스턴트가 클러스터 조회 가능한 MCP 서버 엔드포인트 (M6)
-
 ## 기여
 
 이슈/PR 환영. 코드베이스는 의도적으로 minimal — 순수 Spring Boot + Kotlin 백엔드, React + Vite 프론트엔드, 마이크로서비스 없음. Claude Code 같은 AI 도구로 기여하실 거면 [`CLAUDE.md`](./CLAUDE.md) 참고.

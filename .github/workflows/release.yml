@@ -33,6 +33,10 @@ permissions:
 
 env:
   IMAGE_NAME: kafka-lens
+  # Opt the docker/* actions and other Node-20 JS actions into Node 24 ahead
+  # of the June 2026 cutoff. Action publishers will update at their own pace;
+  # this flag lets us run cleanly today.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   prepare:
@@ -86,7 +90,7 @@ jobs:
       DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
