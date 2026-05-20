@@ -29,57 +29,47 @@ Or pull from GitHub Container Registry: `docker pull ghcr.io/1989v/kafka-lens:la
 
 ---
 
-## Why another Kafka UI?
+## ⭐ The one thing this tool does well — search Kafka messages by any value
 
-provectus/kafka-ui, AKHQ, Redpanda Console all answer **"what's in this topic right now?"** well. They struggle with the questions operators actually face:
+**Type the value you want. Find every message that contains it.** That is the point.
 
-- **"Find every message in `order.events` where `payload.orderId` contains `ORD-2026-`."**
-  Existing tools only do **exact** key/value match — substring or JSON-field search is missing. **Kafka Lens does free-text contains + JSON dotted-path search.**
+provectus/kafka-ui, AKHQ, Redpanda Console all require the **exact** key or value. If you don't already know the precise string, you're out of luck — or stuck writing a one-off consumer script. Kafka Lens lets you search like `grep`:
 
-- **"Show me lag history for this topic over the last 10 minutes, per consumer group, with drain ETA."**
-  Existing tools show only the current lag snapshot. **Kafka Lens samples lag every 10 s into an in-memory ring buffer and renders Datadog/Grafana-style charts per topic.**
+| What you want to find | How in Kafka Lens |
+|---|---|
+| Any message whose value contains `ORD-2026-12345` | Topic → Messages → `value contains: ORD-2026-12345` |
+| Messages where `payload.orderId` starts with `ORD-2026-` | Topic → Messages → JSON field path `payload.orderId`, contains `ORD-2026-` |
+| Same query across `order.events` + `payment.events` + `analytics.events` | Sidebar → **Cross-topic Search** → topics comma-separated, same filters |
+| Trace `correlation-id=abc-123` across the whole pipeline | Cross-topic Search → header equals or value-contains the id |
 
-- **"Reprocess the 80 messages stuck in `payment.events.DLT` back to the original topic — but don't ever let anyone publish directly to a DLQ."**
-  Most tools treat DLQs as ordinary topics. **Kafka Lens auto-detects topic ↔ DLQ mappings, hides the DLQ from the Producer console, and offers a reprocess-only write path with dedupe windows.**
+No regex required. No pre-indexed Elasticsearch. Just `docker run` and type.
 
-- **"Decode Confluent Avro messages without leaving the page."**
-  **Kafka Lens does Avro wire-format decode** (magic byte 0x00 + schema id + Avro payload → JSON) when a Schema Registry URL is configured.
+### Side-by-side vs. other Kafka UIs
 
-If those questions sound familiar, this tool was built for you.
-
-## Headline features
-
-### 🔎 Free-text Kafka search — the kafka-ui exact-match limitation, solved
-
-| Feature | provectus/kafka-ui | AKHQ | Kafka Lens |
+| Search capability | provectus/kafka-ui | AKHQ | **Kafka Lens** |
 |---|---|---|---|
-| Exact key/value equals | ✅ | ✅ | ✅ |
-| **Key/value substring** | ❌ | ⚠️ regex only | ✅ |
-| **JSON field dotted-path contains** | ❌ | ❌ | ✅ |
-| **Cross-topic search** with a single query | ❌ | ❌ | ✅ |
-| Correlation-id trace across multiple topics | ❌ | ❌ | ✅ |
-| Time range, partition range, offset range | ⚠️ partial | ✅ | ✅ |
+| Exact key / value equals | ✅ | ✅ | ✅ |
+| **Key / value substring** | ❌ | ⚠️ regex only | ✅ |
+| **JSON dotted-path contains** (e.g. `payload.orderId`) | ❌ | ❌ | ✅ |
+| **Cross-topic search** with one query | ❌ | ❌ | ✅ |
+| Correlation-id trace across topics | ❌ | ❌ | ✅ |
+| Time range / partition / offset filters | ⚠️ partial | ✅ | ✅ |
 
-### 📈 Per-topic monitoring panel — Datadog/Grafana style without the agent
+If you've ever opened kafka-ui and given up because you don't know the *exact* key — this tool was built for you.
 
-- Total lag · production rate · drain ETA · partition distribution
-- **Lag-over-time line chart** per consumer group (10 min rolling window, 10 s sampling)
-- **Drill from cluster overview → topic stats** without leaving the page
+---
 
-### 🛡️ DLQ safety as a first-class concept
+## Also included (auxiliary)
 
-- Auto-detected `{topic}.DLT` / `dead-letter-{topic}` mappings (configurable patterns)
-- Direct DLQ publishing is **refused at the API level** — HTTP 403
-- Reprocess flow: single / group-by-failure-reason / all → back to origin topic, with dedupe window so the same message can't be reprocessed twice
+Everything below is a side benefit, not the headline. Use them if you need them:
 
-### ⚙️ Operator scaffolding without bloat
-
-- Brokers page with per-broker leader/replica load
-- Topic Configurations card (override-vs-default, sensitive marking)
-- Cluster Dashboard (Topic / Total Overview tabs — heavy tables stay opt-in)
-- Kafka Connect connector list + restart/pause/resume/delete (per-cluster `connectUrl`)
-- Confluent Schema Registry Avro decode (per-cluster `schemaRegistryUrl`)
-- **Destructive ops (delete topic, add partitions) gated behind `TOPICOPS_ALLOWDESTRUCTIVE` — OFF by default.**
+- **Consumer-lag monitoring** — per-topic Stats tab with lag-over-time line chart (10 min rolling, 10 s sampling), production rate, drain ETA, partition distribution
+- **DLQ safety** — auto-detected topic↔DLQ mappings, reprocess-only writes (direct DLQ publish is refused at the API level), dedupe window
+- **Brokers page** — per-broker leader/replica load + controller flag
+- **Topic Configurations** card — override-vs-default with sensitive marking
+- **Kafka Connect** — connector list + restart/pause/resume/delete (set `CLUSTERS_0_CONNECTURL`)
+- **Confluent Schema Registry / Avro decode** — wire-format decode to JSON in place (set `CLUSTERS_0_SCHEMAREGISTRYURL`)
+- **Topic management** (create / delete / add partitions) — gated behind `TOPICOPS_ALLOWDESTRUCTIVE`, OFF by default
 
 ## Design tenets
 

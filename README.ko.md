@@ -29,57 +29,47 @@ GitHub Container Registry 도 사용 가능: `docker pull ghcr.io/1989v/kafka-le
 
 ---
 
-## 왜 또 다른 Kafka UI 인가
+## ⭐ 이 도구가 잘 하는 단 한 가지 — Kafka 메시지를 원하는 값으로 간편 검색
 
-provectus/kafka-ui, AKHQ, Redpanda Console 는 **"지금 이 토픽에 뭐가 들어있나"** 까지는 잘 답해줍니다. 하지만 운영자가 실제로 부딪히는 질문에는 약합니다:
+**찾고 싶은 값을 입력하세요. 그 값이 들어있는 메시지를 다 찾아줍니다.** 그게 전부입니다.
 
-- **"`order.events` 에서 `payload.orderId` 가 `ORD-2026-` 으로 시작하는 메시지 다 찾아줘"**
-  기존 도구는 키/값 **완전 일치**만 지원. 부분 일치(substring)나 **JSON 필드 검색은 없음**. → **Kafka Lens 는 free-text contains + JSON dotted-path 검색** 제공.
+provectus/kafka-ui, AKHQ, Redpanda Console 모두 키/값이 **정확히 일치** 해야만 검색됩니다. 정확한 문자열을 모르면 못 찾고, 일회용 컨슈머 스크립트로 뒤져야 합니다. Kafka Lens 는 `grep` 처럼 검색합니다:
 
-- **"이 토픽의 lag 을 지난 10분간 시계열로, 그룹별로, drain ETA 까지 보여줘"**
-  기존 도구는 현재 시점 lag 스냅샷만. → **Kafka Lens 는 10초마다 lag 을 in-memory ring buffer 에 샘플링** 해서 토픽별 Datadog/Grafana 스타일 차트 렌더.
+| 찾고 싶은 것 | Kafka Lens 에서 |
+|---|---|
+| value 에 `ORD-2026-12345` 포함된 메시지 다 | Topic → Messages → `value contains: ORD-2026-12345` |
+| `payload.orderId` 가 `ORD-2026-` 으로 시작하는 메시지 | Topic → Messages → JSON field path `payload.orderId`, contains `ORD-2026-` |
+| 같은 쿼리를 `order.events` + `payment.events` + `analytics.events` 동시에 | 사이드바 → **Cross-topic Search** → topics 콤마 구분 |
+| `correlation-id=abc-123` 을 파이프라인 전체에서 추적 | Cross-topic Search → header equals 또는 value contains |
 
-- **"`payment.events.DLT` 에 쌓인 80건을 원본 토픽으로 재처리해줘. 단, DLQ 에 누군가 직접 발행하는 건 절대 금지"**
-  대부분의 도구는 DLQ 를 보통 토픽 취급. → **Kafka Lens 는 토픽 ↔ DLQ 매핑 자동 탐지**, Producer 콘솔에서 DLQ 숨김, **재처리만 허용** (dedupe window 포함).
+정규식 필요 없음. Elasticsearch 사전 인덱싱 필요 없음. `docker run` 한 줄 + 검색창에 타이핑.
 
-- **"Confluent Avro 메시지를 화면 떠나지 않고 디코딩해줘"**
-  → Schema Registry URL 설정 시 **Avro wire-format 자동 디코딩** (magic byte 0x00 + schema id + Avro payload → JSON).
+### 다른 Kafka UI 와 비교
 
-이런 질문이 익숙하다면 이 도구는 당신을 위해 만들어졌습니다.
-
-## 핵심 기능
-
-### 🔎 Free-text Kafka 검색 — kafka-ui 의 정확 일치 제약을 해소
-
-| 기능 | provectus/kafka-ui | AKHQ | Kafka Lens |
+| 검색 기능 | provectus/kafka-ui | AKHQ | **Kafka Lens** |
 |---|---|---|---|
-| 키/값 완전 일치 | ✅ | ✅ | ✅ |
-| **키/값 부분 일치 (substring)** | ❌ | ⚠️ regex 만 | ✅ |
-| **JSON dotted-path 검색** (예: `payload.orderId`) | ❌ | ❌ | ✅ |
-| **여러 토픽 동시 검색** (한 번에) | ❌ | ❌ | ✅ |
+| 키 / 값 완전 일치 | ✅ | ✅ | ✅ |
+| **키 / 값 부분 일치 (substring)** | ❌ | ⚠️ regex 만 | ✅ |
+| **JSON dotted-path 검색** (`payload.orderId`) | ❌ | ❌ | ✅ |
+| **여러 토픽 동시 검색** | ❌ | ❌ | ✅ |
 | Correlation-id 토픽 횡단 trace | ❌ | ❌ | ✅ |
-| 시간 / 파티션 / offset 범위 | ⚠️ 부분 | ✅ | ✅ |
+| 시간 / 파티션 / offset 필터 | ⚠️ 부분 | ✅ | ✅ |
 
-### 📈 토픽별 모니터링 패널 — 에이전트 없이도 Datadog/Grafana 수준
+kafka-ui 열어놓고 "정확한 키 몰라서 못 찾겠다" 한 적 있다면 — 이 도구는 그분을 위한 도구입니다.
 
-- Total lag · production rate · drain ETA · partition 분포
-- **컨슈머 그룹별 lag 시계열 차트** (10분 롤링 윈도우, 10초 샘플링)
-- **클러스터 overview → 토픽 stats 드릴다운** 한 화면에서
+---
 
-### 🛡️ DLQ 안전성을 1급 컨셉으로
+## 그 외에 가능한 것 (부가 기능)
 
-- `{topic}.DLT` / `dead-letter-{topic}` 매핑 자동 탐지 (패턴 설정 가능)
-- DLQ 에 직접 발행은 **API 레벨에서 거부** — HTTP 403
-- 재처리 흐름: 단건 / 실패 사유별 그룹 / 전체 → 원본 토픽으로, dedupe window 로 중복 재처리 차단
+아래는 모두 부가 — 메인은 검색입니다. 필요할 때만 쓰세요:
 
-### ⚙️ 운영용 부가 기능 (군더더기 없이)
-
-- Brokers 페이지 — 브로커별 leader / replica 부하
-- 토픽 Configurations 카드 (override vs default, sensitive 마킹)
-- 클러스터 Dashboard (Topic / Total Overview 탭 — 무거운 테이블은 명시적으로 클릭해야 로드)
-- Kafka Connect 통합 — connector 목록 + restart/pause/resume/delete (per-cluster `connectUrl`)
-- Confluent Schema Registry Avro 디코딩 (per-cluster `schemaRegistryUrl`)
-- **Destructive ops (토픽 삭제, 파티션 추가) 는 `TOPICOPS_ALLOWDESTRUCTIVE` 가드 뒤 — 기본 OFF.**
+- **컨슈머 lag 모니터링** — 토픽별 Stats 탭에 lag 시계열 라인 차트 (10분 롤링, 10초 샘플링), production rate, drain ETA, partition 분포
+- **DLQ 안전성** — 토픽↔DLQ 자동 매핑, 재처리 전용 write (DLQ 직접 발행은 API 거부), dedupe window
+- **Brokers 페이지** — 브로커별 leader/replica 부하 + controller 표시
+- **토픽 Configurations** 카드 — override vs default, sensitive 마킹
+- **Kafka Connect** — connector 목록 + restart/pause/resume/delete (`CLUSTERS_0_CONNECTURL` 설정 시)
+- **Confluent Schema Registry / Avro 디코딩** — wire-format 자동 JSON 변환 (`CLUSTERS_0_SCHEMAREGISTRYURL` 설정 시)
+- **토픽 관리** (생성 / 삭제 / 파티션 추가) — `TOPICOPS_ALLOWDESTRUCTIVE` 게이트 뒤, 기본 OFF
 
 ## 설계 원칙
 
