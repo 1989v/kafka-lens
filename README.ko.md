@@ -1,5 +1,7 @@
 # Kafka Lens
 
+**Language:** [English](README.md) | [한국어](README.ko.md)
+
 > 운영자가 실제로 던지는 질문에 맞춰 만든 self-hosted Kafka UI — 토픽 횡단 **자유 텍스트 검색**, **실시간 컨슈머 lag 시계열 차트**, **DLQ 흐름 시각화**, 재처리 전용 DLQ write. 단일 Docker 이미지, 외부 의존성 0.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
@@ -7,8 +9,6 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF.svg)](https://kotlinlang.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F.svg)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
-
-🇬🇧 English README: [`README.md`](./README.md)
 
 ---
 

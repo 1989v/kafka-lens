@@ -1,5 +1,7 @@
 # Kafka Lens
 
+**Language:** [English](README.md) | [한국어](README.ko.md)
+
 > A self-hosted Kafka UI built around the questions operators actually ask — free-text search across topics, real-time consumer-lag charts, DLQ flow visualization, and reprocess-only DLQ writes. Single Docker image, no external dependencies.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
@@ -7,8 +9,6 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF.svg)](https://kotlinlang.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F.svg)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
-
-🇰🇷 한국어 README: [`README.ko.md`](./README.ko.md)
 
 ---
 
