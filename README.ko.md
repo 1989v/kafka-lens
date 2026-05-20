@@ -89,6 +89,85 @@ provectus/kafka-ui, AKHQ, Redpanda Console 는 **"지금 이 토픽에 뭐가 �
 4. **DLQ 는 신성한 영역.** DLQ 로의 write 는 재처리 → 원본 외엔 불가.
 5. **브로커 호환성 우선.** Apache Kafka 2.8+ (KRaft / ZooKeeper 모두). 신버전 의존 기능은 `ApiVersions` 협상 + UI 에 라벨링.
 
+## 사용 가이드
+
+`docker run` 후 <http://localhost:9192> 진입. 좌측 사이드바에 두 그룹:
+- **Cluster** — Dashboard / Brokers / Topics / Consumer Groups
+- **Operations** — Cross-topic Search / DLQ Ops / Publish / Connectors
+
+클러스터 설정이 없으면 setup 카드가 떠서 어떤 env var 또는 YAML 을 넣어야 하는지 알려줍니다.
+
+### 단일 토픽 메시지 검색
+
+1. 사이드바 → **Topics** → 토픽 행 클릭.
+2. **Messages** 탭이 열림. mode 선택:
+   - **Latest** — 가장 최근 *N* 건 (pageSize). "지금 흘러가는 메시지" 보기.
+   - **Earliest** — 토픽 시작부터. 깊은 과거의 특정 키 찾기.
+   - **From timestamp** / **Within range** — 시간 기반 seek.
+3. 옵션 필터: `key contains`, `value contains` (substring, JSON 본문에도 적용).
+4. 행 클릭 → 모달에 JSON pretty + 헤더 + Avro 스키마 배지 (디코딩된 경우).
+
+> Latest + 필터는 최근 윈도우만 검사합니다. 오래된 키일 수 있으면 빈 결과 화면에서 **Earliest** 로 1-click 전환 가능.
+
+### 토픽 횡단 / JSON 필드 검색
+
+*"`order.events` / `payment.events` / `analytics.events` 모두에서 `payload.orderId` 가 `ORD-2026-` 으로 시작하는 메시지 찾기"* 같은 시나리오:
+
+1. 사이드바 → **Cross-topic Search**.
+2. Topics: comma-separated.
+3. JSON field path: 예 `payload.orderId`. JSON field equals/contains: 찾을 값.
+4. 시간 범위 / 최대 결과 등 설정 후 Run.
+
+### 컨슈머 lag 모니터링
+
+1. 사이드바 → **Dashboard**. **Topic** 탭이 기본 — 상단에 검색 가능한 picker.
+2. 토픽 선택 시 stats 패널이 즉시 렌더:
+   - 5 카드: Total lag · Production rate · Top group drain ETA · Partitions · Available messages
+   - **그룹별 lag 시계열 라인 차트** (10분 롤링 윈도우, 10초 샘플링 — 2 sample 모이면 line 나타남, ~20초)
+   - 그룹 테이블: current lag · consume rate · drain ETA
+   - 파티션 분포 바 차트
+3. 클러스터 전체 lag 순위: **Total Overview** 탭 (클릭 시에만 fetch).
+
+### DLQ 운영
+
+1. 사이드바 → **DLQ Ops** → **Auto-detect mappings**. 클러스터의 `dlqNamingPatterns` (기본 `{topic}.DLT`, `{topic}-dlq`, `dead-letter-{topic}`) 에 맞는 토픽들을 스캔.
+2. 매핑 행 클릭 → 메시지 목록 (원본 offset, exception class, 재시도 횟수 포함).
+3. 재처리할 메시지 체크 → **Reprocess → `<원본 토픽>`** 버튼.
+
+안전 가드:
+- Publish 콘솔에서 DLQ 직접 발행은 HTTP 403 으로 거부.
+- dedupe window (`dlq.reprocess.duplicate-detection-window`, 기본 24h) 가 같은 메시지의 중복 재처리 차단.
+
+### 토픽 관리 (게이트)
+
+토픽 생성 / 삭제 / 파티션 추가는 `TOPICOPS_ALLOWDESTRUCTIVE` 뒤에 가려져 있습니다 (기본 `false`). 명시적으로 켜기:
+
+```bash
+docker run -p 9192:9192 \
+  -e TOPICOPS_ALLOWDESTRUCTIVE=true \
+  -e CLUSTERS_0_ID=local \
+  -e CLUSTERS_0_BOOTSTRAPSERVERS=host.docker.internal:9092 \
+  nugaba/kafka-lens:latest
+```
+
+켜진 상태에서:
+- Topics 페이지 → **+ New topic** 버튼.
+- 토픽 detail 헤더 → **Add partitions** / **Delete topic** 버튼.
+- Delete 는 토픽명 정확히 타이핑 후에만 활성화.
+- Add partitions 는 key-ordering 깨짐 + 컨슈머 그룹 rebalance 경고 동반.
+
+### Kafka Connect
+
+`CLUSTERS_0_CONNECTURL=http://connect.host:8083` 설정 후 사이드바 → **Connectors**:
+- connector 테이블: name · type (source/sink) · state · tasks (running / failed) · class.
+- 행 클릭 → 상세 모달: JSON config, 태스크별 상태, Restart / Pause / Resume / Delete (typed confirmation).
+
+`connectUrl` 미설정 시 페이지가 setup 안내 카드를 표시.
+
+### Confluent Schema Registry / Avro
+
+`CLUSTERS_0_SCHEMAREGISTRYURL=http://schema-registry.host:8081` 설정. Confluent magic byte `0x00` + 4 byte schema id 형식 메시지는 자동으로 JSON 디코딩. 메시지 모달에 **Avro · schema #N** 배지 + encoding 라벨 표시. 스키마는 한 번 fetch 후 프로세스 수명 동안 캐시.
+
 ## 빠른 시작
 
 ```bash

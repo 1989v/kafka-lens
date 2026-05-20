@@ -89,6 +89,85 @@ If those questions sound familiar, this tool was built for you.
 4. **DLQ is sacred.** The only write path to a DLQ is reprocess → origin.
 5. **Broker compatibility first.** Targets Apache Kafka 2.8+ (KRaft and ZooKeeper). Features that need newer brokers are negotiated via `ApiVersions` and labeled in the UI.
 
+## Usage guide
+
+After `docker run`, open <http://localhost:9192>. The left sidebar has two groups:
+- **Cluster** — Dashboard / Brokers / Topics / Consumer Groups
+- **Operations** — Cross-topic Search / DLQ Ops / Publish / Connectors
+
+If no cluster is configured, you land on a setup card with the exact env vars / YAML to add.
+
+### Searching messages in a single topic
+
+1. Sidebar → **Topics** → click any topic row.
+2. The **Messages** tab opens. Pick a mode:
+   - **Latest** — last *N* messages (the page size). Best for "what's flowing right now."
+   - **Earliest** — from the start of the topic. Best for finding specific keys anywhere in history.
+   - **From timestamp** / **Within range** — seek by time.
+3. Optional filters: `key contains`, `value contains` (substring, works on JSON bodies too).
+4. Click any row → modal with prettified JSON + headers + Avro schema badge when decoded.
+
+> Latest + filter only checks the recent window. If a key could be older, the empty-result UI gives you a one-click switch to Earliest.
+
+### Cross-topic / JSON-field search
+
+For things like *"find every message in `order.events`, `payment.events`, and `analytics.events` where `payload.orderId` contains `ORD-2026-`"*:
+
+1. Sidebar → **Cross-topic Search**.
+2. Topics: comma-separated.
+3. JSON field path: e.g. `payload.orderId`. JSON field equals/contains: target value.
+4. Time range, max results, etc. Run.
+
+### Monitoring consumer lag
+
+1. Sidebar → **Dashboard**. The **Topic** tab is the default — searchable topic picker on top.
+2. Pick a topic. Its full stats panel renders inline:
+   - 5 cards: Total lag · Production rate · Top group drain ETA · Partitions · Available messages
+   - **Lag-over-time line chart** per consumer group (10-min rolling window, 10s sampling — the line appears once two samples are collected, ~20s)
+   - Consumer groups table with current lag · consume rate · drain ETA
+   - Partition message distribution bar chart
+3. For cluster-wide lag rankings: **Total Overview** tab (loaded only when clicked).
+
+### DLQ operations
+
+1. Sidebar → **DLQ Ops** → **Auto-detect mappings**. Kafka Lens scans for topics matching the cluster's `dlqNamingPatterns` (default: `{topic}.DLT`, `{topic}-dlq`, `dead-letter-{topic}`).
+2. Pick a mapping row → message list with parsed origin offsets, exception class, retry count.
+3. Check messages to reprocess → **Reprocess → `<origin-topic>`** button.
+
+Safety guards:
+- The Publish console refuses direct DLQ publishing (HTTP 403).
+- A dedupe window (`dlq.reprocess.duplicate-detection-window`, default 24h) blocks reprocessing the same message twice.
+
+### Topic management (gated)
+
+Topic create / delete / add partitions are gated behind `TOPICOPS_ALLOWDESTRUCTIVE` (default `false`). Enable it deliberately:
+
+```bash
+docker run -p 9192:9192 \
+  -e TOPICOPS_ALLOWDESTRUCTIVE=true \
+  -e CLUSTERS_0_ID=local \
+  -e CLUSTERS_0_BOOTSTRAPSERVERS=host.docker.internal:9092 \
+  nugaba/kafka-lens:latest
+```
+
+When ON:
+- Topics page → **+ New topic** button.
+- Topic detail header → **Add partitions** / **Delete topic** buttons.
+- Delete requires typing the exact topic name to confirm.
+- Add partitions warns about per-key ordering breakage + consumer-group rebalance.
+
+### Kafka Connect
+
+Set `CLUSTERS_0_CONNECTURL=http://connect.host:8083`. Sidebar → **Connectors**:
+- Connector table: name · type (source/sink) · state · tasks (running / failed) · class.
+- Row click → detail modal with JSON config, per-task status, Restart / Pause / Resume / Delete (typed confirmation).
+
+If `connectUrl` isn't set, the page renders a setup card pointing at the env var.
+
+### Confluent Schema Registry / Avro
+
+Set `CLUSTERS_0_SCHEMAREGISTRYURL=http://schema-registry.host:8081`. Messages with the Confluent magic byte `0x00` + 4-byte schema id are auto-decoded to JSON. The message modal shows an **Avro · schema #N** badge plus the encoding label. Schemas are fetched once and cached for the lifetime of the process.
+
 ## Quick start
 
 ```bash
