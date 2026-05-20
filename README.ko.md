@@ -9,6 +9,23 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF.svg)](https://kotlinlang.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F.svg)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
+[![Docker Hub](https://img.shields.io/docker/pulls/nugaba/kafka-lens?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/nugaba/kafka-lens)
+[![GHCR](https://img.shields.io/badge/GHCR-1989v%2Fkafka--lens-2088FF?logo=github)](https://github.com/1989v/kafka-lens/pkgs/container/kafka-lens)
+
+## 🚀 30초 만에 띄우기
+
+```bash
+docker pull nugaba/kafka-lens:latest
+docker run -p 9192:9192 \
+  -e CLUSTERS_0_ID=local \
+  -e CLUSTERS_0_NAME='Local Kafka' \
+  -e CLUSTERS_0_BOOTSTRAPSERVERS=host.docker.internal:9092 \
+  nugaba/kafka-lens:latest
+```
+
+브라우저에서 <http://localhost:9192>. Multi-arch (linux/amd64 + linux/arm64) — Apple Silicon, Raspberry Pi 4+, OCI Ampere A1 등에서 네이티브로 동작.
+
+GitHub Container Registry 도 사용 가능: `docker pull ghcr.io/1989v/kafka-lens:latest`.
 
 ---
 
