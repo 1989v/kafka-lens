@@ -87,7 +87,7 @@ docker run -p 9192:9192 \
 Docker Hub 에서도 받을 수 있습니다 (발행 이후):
 
 ```bash
-docker pull 1989v/kafka-lens:latest
+docker pull nugaba/kafka-lens:latest
 ```
 
 이미지는 multi-arch — `linux/amd64`, `linux/arm64` 모두 빌드됨 (Apple Silicon, Raspberry Pi 4+, OCI Ampere A1 등).

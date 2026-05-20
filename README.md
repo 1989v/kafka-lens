@@ -87,7 +87,7 @@ docker run -p 9192:9192 \
 Or from Docker Hub (once published):
 
 ```bash
-docker pull 1989v/kafka-lens:latest
+docker pull nugaba/kafka-lens:latest
 ```
 
 Multi-arch images are built for `linux/amd64` and `linux/arm64` (works on Apple Silicon, Raspberry Pi 4+, OCI Ampere A1, etc.).
