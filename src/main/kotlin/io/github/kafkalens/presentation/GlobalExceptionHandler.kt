@@ -1,5 +1,6 @@
 package io.github.kafkalens.presentation
 
+import io.github.kafkalens.domain.ports.ConnectNotConfigured
 import io.github.kafkalens.infrastructure.kafka.DirectDlqPublishForbidden
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.HttpStatus
@@ -25,6 +26,11 @@ class GlobalExceptionHandler {
     fun handleDlqGuard(ex: DirectDlqPublishForbidden): ResponseEntity<ApiError> =
         ApiError("DLQ_DIRECT_PUBLISH_FORBIDDEN", ex.message ?: "Forbidden", mapOf("topic" to ex.topic))
             .toResponse(HttpStatus.FORBIDDEN)
+
+    @ExceptionHandler(ConnectNotConfigured::class)
+    fun handleConnectNotConfigured(ex: ConnectNotConfigured): ResponseEntity<ApiError> =
+        ApiError("CONNECT_NOT_CONFIGURED", ex.message ?: "Kafka Connect endpoint not configured")
+            .toResponse(HttpStatus.PRECONDITION_FAILED)
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ApiError> {

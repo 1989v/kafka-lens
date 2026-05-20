@@ -4,6 +4,8 @@ export type ClusterDetail = Cluster & {
   brokerCount: number;
   supportedFeatures: Record<string, boolean>;
   dlqNamingPatterns: string[];
+  connectConfigured: boolean;
+  schemaRegistryConfigured: boolean;
 };
 export type Partition = {
   partition: number;
@@ -203,6 +205,55 @@ export const alterTopicConfigs = (clusterId: string, name: string, entries: Reco
     method: "PUT",
     body: JSON.stringify({ entries }),
   });
+
+// ---- Kafka Connect ----
+export type ConnectorType = "SOURCE" | "SINK" | "UNKNOWN";
+export type TaskSummary = {
+  id: number;
+  state: string;
+  workerId: string | null;
+  trace: string | null;
+};
+export type ConnectorSummary = {
+  name: string;
+  type: ConnectorType;
+  connectorClass: string | null;
+  state: string;
+  workerId: string | null;
+  tasks: TaskSummary[];
+  topics: string[];
+  failedTasks: number;
+  runningTasks: number;
+};
+export type ConnectorDetail = {
+  summary: ConnectorSummary;
+  config: Record<string, string>;
+};
+
+export const fetchConnectors = (clusterId: string) =>
+  fetch(`/api/clusters/${clusterId}/connect/connectors`).then(async (r) => {
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}: ${await r.text()}`);
+    return (await r.json()) as ConnectorSummary[];
+  });
+
+export const fetchConnector = (clusterId: string, name: string) =>
+  fetch(`/api/clusters/${clusterId}/connect/connectors/${encodeURIComponent(name)}`).then(async (r) => {
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}: ${await r.text()}`);
+    return (await r.json()) as ConnectorDetail;
+  });
+
+export const connectorAction = {
+  restart: (clusterId: string, name: string, onlyFailed = false) =>
+    httpVoid(`/api/clusters/${clusterId}/connect/connectors/${encodeURIComponent(name)}/restart?onlyFailed=${onlyFailed}`, { method: "POST" }),
+  restartTask: (clusterId: string, name: string, taskId: number) =>
+    httpVoid(`/api/clusters/${clusterId}/connect/connectors/${encodeURIComponent(name)}/tasks/${taskId}/restart`, { method: "POST" }),
+  pause: (clusterId: string, name: string) =>
+    httpVoid(`/api/clusters/${clusterId}/connect/connectors/${encodeURIComponent(name)}/pause`, { method: "PUT" }),
+  resume: (clusterId: string, name: string) =>
+    httpVoid(`/api/clusters/${clusterId}/connect/connectors/${encodeURIComponent(name)}/resume`, { method: "PUT" }),
+  delete: (clusterId: string, name: string) =>
+    httpVoid(`/api/clusters/${clusterId}/connect/connectors/${encodeURIComponent(name)}`, { method: "DELETE" }),
+};
 
 export type TopicStats = {
   name: string;

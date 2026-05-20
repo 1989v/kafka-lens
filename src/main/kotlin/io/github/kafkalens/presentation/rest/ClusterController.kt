@@ -30,6 +30,8 @@ class ClusterController(
             brokerCount = features?.brokerCount ?: 0,
             supportedFeatures = features?.supports?.mapKeys { it.key.name } ?: emptyMap(),
             dlqNamingPatterns = cfg.dlqNamingPatterns,
+            connectConfigured = cfg.connectUrl != null,
+            schemaRegistryConfigured = cfg.schemaRegistryUrl != null,
         )
     }
 
@@ -42,5 +44,7 @@ class ClusterController(
         val brokerCount: Int,
         val supportedFeatures: Map<String, Boolean>,
         val dlqNamingPatterns: List<String>,
+        val connectConfigured: Boolean,
+        val schemaRegistryConfigured: Boolean,
     )
 }

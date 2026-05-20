@@ -10,6 +10,7 @@ import PublishPage from "./pages/PublishPage";
 import SetupGuide from "./pages/SetupGuide";
 import DashboardPage from "./pages/DashboardPage";
 import BrokersPage from "./pages/BrokersPage";
+import ConnectorsPage from "./pages/ConnectorsPage";
 
 export default function App() {
   return (
@@ -89,6 +90,7 @@ function ClusterShell() {
             <NavLink to={`/c/${clusterId}/search`}>Cross-topic Search</NavLink>
             <NavLink to={`/c/${clusterId}/dlq`}>DLQ Ops</NavLink>
             <NavLink to={`/c/${clusterId}/publish`}>Publish</NavLink>
+            <NavLink to={`/c/${clusterId}/connectors`}>Connectors</NavLink>
           </div>
         </nav>
       </aside>
@@ -103,6 +105,7 @@ function ClusterShell() {
           <Route path="search" element={<SearchPage clusterId={clusterId} />} />
           <Route path="dlq" element={<DlqPage clusterId={clusterId} />} />
           <Route path="publish" element={<PublishPage clusterId={clusterId} />} />
+          <Route path="connectors" element={<ConnectorsPage clusterId={clusterId} />} />
           <Route path="*" element={<Navigate to="topics" />} />
         </Routes>
       </main>

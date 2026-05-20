@@ -7,6 +7,8 @@ data class ClusterConfig(
     val security: SecurityConfig = SecurityConfig(),
     val dlqNamingPatterns: List<String> = DEFAULT_DLQ_PATTERNS,
     val clientProperties: Map<String, String> = emptyMap(),
+    val connectUrl: String? = null,
+    val schemaRegistryUrl: String? = null,
 ) {
     init {
         require(id.isNotBlank()) { "cluster id must not be blank" }

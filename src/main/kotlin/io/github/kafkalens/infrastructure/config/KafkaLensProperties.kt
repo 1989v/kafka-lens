@@ -20,6 +20,8 @@ data class KafkaLensProperties(
         var security: SecurityProps = SecurityProps(),
         var dlqNamingPatterns: List<String> = emptyList(),
         var clientProperties: Map<String, String> = emptyMap(),
+        var connectUrl: String? = null,
+        var schemaRegistryUrl: String? = null,
     ) {
         fun toDomain(): ClusterConfig {
             val patterns = dlqNamingPatterns.ifEmpty { ClusterConfig.DEFAULT_DLQ_PATTERNS }
@@ -30,6 +32,8 @@ data class KafkaLensProperties(
                 security = security.toDomain(),
                 dlqNamingPatterns = patterns,
                 clientProperties = clientProperties,
+                connectUrl = connectUrl?.takeIf { it.isNotBlank() },
+                schemaRegistryUrl = schemaRegistryUrl?.takeIf { it.isNotBlank() },
             )
         }
     }
