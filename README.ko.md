@@ -33,7 +33,7 @@ GitHub Container Registry 도 사용 가능: `docker pull ghcr.io/1989v/kafka-le
 
 **찾고 싶은 값을 입력하세요. 그 값이 들어있는 메시지를 다 찾아줍니다.** 그게 전부입니다.
 
-provectus/kafka-ui, AKHQ, Redpanda Console 모두 키/값이 **정확히 일치** 해야만 검색됩니다. 정확한 문자열을 모르면 못 찾고, 일회용 컨슈머 스크립트로 뒤져야 합니다. Kafka Lens 는 `grep` 처럼 검색합니다:
+Kafka Lens 는 Kafka 메시지를 `grep` 처럼 검색합니다 — 키/값 부분 일치, JSON 본문 내 dotted-path 조회, 그리고 같은 쿼리를 여러 토픽에 동시에 던지는 것까지:
 
 | 찾고 싶은 것 | Kafka Lens 에서 |
 |---|---|
@@ -44,18 +44,14 @@ provectus/kafka-ui, AKHQ, Redpanda Console 모두 키/값이 **정확히 일치*
 
 정규식 필요 없음. Elasticsearch 사전 인덱싱 필요 없음. `docker run` 한 줄 + 검색창에 타이핑.
 
-### 다른 Kafka UI 와 비교
+### 지원하는 검색 기능
 
-| 검색 기능 | provectus/kafka-ui | AKHQ | **Kafka Lens** |
-|---|---|---|---|
-| 키 / 값 완전 일치 | ✅ | ✅ | ✅ |
-| **키 / 값 부분 일치 (substring)** | ❌ | ⚠️ regex 만 | ✅ |
-| **JSON dotted-path 검색** (`payload.orderId`) | ❌ | ❌ | ✅ |
-| **여러 토픽 동시 검색** | ❌ | ❌ | ✅ |
-| Correlation-id 토픽 횡단 trace | ❌ | ❌ | ✅ |
-| 시간 / 파티션 / offset 필터 | ⚠️ 부분 | ✅ | ✅ |
-
-kafka-ui 열어놓고 "정확한 키 몰라서 못 찾겠다" 한 적 있다면 — 이 도구는 그분을 위한 도구입니다.
+- 키 / 값 완전 일치
+- 키 / 값 부분 일치 (substring)
+- JSON dotted-path 검색 (예: `payload.orderId`)
+- 여러 토픽 동시 검색
+- Correlation-id 토픽 횡단 trace
+- 시간 / 파티션 / offset 필터
 
 ---
 
@@ -186,7 +182,7 @@ Kafka 까지 함께 띄우는 예시: [`docker-compose.example.yml`](./docker-co
 
 두 가지 방식, 자유롭게 조합. env 가 YAML 을 키 단위로 덮어씁니다.
 
-### Environment variables (provectus/kafka-ui 스타일)
+### Environment variables
 
 ```bash
 CLUSTERS_0_ID=prod

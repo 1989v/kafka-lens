@@ -33,7 +33,7 @@ Or pull from GitHub Container Registry: `docker pull ghcr.io/1989v/kafka-lens:la
 
 **Type the value you want. Find every message that contains it.** That is the point.
 
-provectus/kafka-ui, AKHQ, Redpanda Console all require the **exact** key or value. If you don't already know the precise string, you're out of luck — or stuck writing a one-off consumer script. Kafka Lens lets you search like `grep`:
+Kafka Lens lets you search Kafka like `grep` — substring match on keys and values, dotted-path lookups inside JSON bodies, and the same query fanned out across multiple topics at once:
 
 | What you want to find | How in Kafka Lens |
 |---|---|
@@ -44,18 +44,14 @@ provectus/kafka-ui, AKHQ, Redpanda Console all require the **exact** key or valu
 
 No regex required. No pre-indexed Elasticsearch. Just `docker run` and type.
 
-### Side-by-side vs. other Kafka UIs
+### What the search supports
 
-| Search capability | provectus/kafka-ui | AKHQ | **Kafka Lens** |
-|---|---|---|---|
-| Exact key / value equals | ✅ | ✅ | ✅ |
-| **Key / value substring** | ❌ | ⚠️ regex only | ✅ |
-| **JSON dotted-path contains** (e.g. `payload.orderId`) | ❌ | ❌ | ✅ |
-| **Cross-topic search** with one query | ❌ | ❌ | ✅ |
-| Correlation-id trace across topics | ❌ | ❌ | ✅ |
-| Time range / partition / offset filters | ⚠️ partial | ✅ | ✅ |
-
-If you've ever opened kafka-ui and given up because you don't know the *exact* key — this tool was built for you.
+- Exact key / value equals
+- Key / value substring match
+- JSON dotted-path contains (e.g. `payload.orderId`)
+- Cross-topic search with one query
+- Correlation-id trace across topics
+- Time range / partition / offset filters
 
 ---
 
@@ -186,7 +182,7 @@ See [`docker-compose.example.yml`](./docker-compose.example.yml) for a working K
 
 Two ways, compose freely. Environment variables override YAML per key.
 
-### Environment variables (provectus/kafka-ui style)
+### Environment variables
 
 ```bash
 CLUSTERS_0_ID=prod
